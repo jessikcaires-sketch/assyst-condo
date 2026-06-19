@@ -155,9 +155,11 @@ export function CondoDetail() {
 
       <div className="space-y-6 px-4 py-6 md:px-8">
         {condo.photoUrl && (
-          <div className="h-48 w-full overflow-hidden rounded-xl border bg-muted md:h-64">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={condo.photoUrl} alt={`Fachada — ${condo.name}`} className="h-full w-full object-cover" />
+          <div className="w-full max-w-sm overflow-hidden rounded-xl border bg-muted">
+            <div className="aspect-[4/3] w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={condo.photoUrl} alt={`Fachada — ${condo.name}`} className="h-full w-full object-cover" />
+            </div>
           </div>
         )}
 

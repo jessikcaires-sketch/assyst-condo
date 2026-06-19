@@ -3,7 +3,7 @@
 import * as React from "react";
 import { X, Building2, CheckCircle2, Plus, Trash2, ImagePlus, Search, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { condoStatus, contactRole, coverage, serviceProgress, serviceDefaultKind, serviceDefaultActivities } from "@/lib/domain";
+import { condoStatus, contactRole, coverage, serviceProgress, serviceDefaultKind, serviceDefaultActivities, activityResponsible } from "@/lib/domain";
 import { useCatalogs } from "@/lib/catalog-store";
 import type {
   Condominium,
@@ -15,6 +15,7 @@ import type {
   ServiceKind,
   ServiceProgress,
   ServiceActivity,
+  ActivityResponsible,
 } from "@/lib/types";
 import type { CondoInput } from "@/lib/condo-store";
 import { compressImage } from "@/lib/image";
@@ -130,10 +131,11 @@ export function CondoDialog({
     const svc: ContractedService = { name, coverage: "contrato", kind };
     if (kind === "pontual") {
       svc.progress = "liberado";
-      svc.activities = serviceDefaultActivities(name).map((label, i) => ({
+      svc.activities = serviceDefaultActivities(name).map((a, i) => ({
         id: `act-${Date.now()}-${i}-${Math.floor(Math.random() * 1e4)}`,
-        label,
+        label: a.label,
         done: false,
+        responsible: a.responsible,
       }));
     }
     return svc;
@@ -168,10 +170,11 @@ export function CondoDialog({
         const next: ContractedService = { ...s, kind };
         // Ao virar pontual, já traz as atividades-padrão e status inicial.
         if (kind === "pontual" && (!s.activities || s.activities.length === 0)) {
-          next.activities = serviceDefaultActivities(name).map((label, i) => ({
+          next.activities = serviceDefaultActivities(name).map((a, i) => ({
             id: `act-${Date.now()}-${i}`,
-            label,
+            label: a.label,
             done: false,
+            responsible: a.responsible,
           }));
           next.progress = s.progress ?? "liberado";
         }
@@ -189,6 +192,8 @@ export function CondoDialog({
     updateActivities(name, (acts) => acts.map((a) => (a.id === id ? { ...a, done: !a.done } : a)));
   const renameActivity = (name: string, id: string, label: string) =>
     updateActivities(name, (acts) => acts.map((a) => (a.id === id ? { ...a, label } : a)));
+  const setActivityField = (name: string, id: string, patch: Partial<ServiceActivity>) =>
+    updateActivities(name, (acts) => acts.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   const removeActivity = (name: string, id: string) =>
     updateActivities(name, (acts) => acts.filter((a) => a.id !== id));
 
@@ -445,19 +450,23 @@ export function CondoDialog({
                     </label>
                   </div>
                   <div className="mt-2">
-                    <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Atividades</span>
-                    <div className="mt-1 space-y-1">
+                    <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Etapas</span>
+                    <div className="mt-1 space-y-1.5">
                       {(s.activities ?? []).map((a) => (
-                        <div key={a.id} className="flex items-center gap-2">
+                        <div key={a.id} className="flex flex-wrap items-center gap-1.5">
                           <input type="checkbox" checked={a.done} onChange={() => toggleActivity(s.name, a.id)} className="size-3.5 shrink-0 accent-primary" aria-label={`Concluir ${a.label}`} />
-                          <input value={a.label} onChange={(e) => renameActivity(s.name, a.id, e.target.value)} placeholder="Atividade…" className={cn(miniInput, "flex-1", a.done && "line-through opacity-60")} />
-                          <button type="button" onClick={() => removeActivity(s.name, a.id)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label="Remover atividade">
+                          <input value={a.label} onChange={(e) => renameActivity(s.name, a.id, e.target.value)} placeholder="Etapa…" className={cn(miniInput, "min-w-[8rem] flex-1", a.done && "line-through opacity-60")} />
+                          <input type="date" value={a.dueDate ?? ""} onChange={(e) => setActivityField(s.name, a.id, { dueDate: e.target.value || undefined })} title="Prazo" className={cn(miniInput, "w-32")} />
+                          <select aria-label="Responsável" value={a.responsible ?? "assyst"} onChange={(e) => setActivityField(s.name, a.id, { responsible: e.target.value as ActivityResponsible })} className={miniSelect}>
+                            {(Object.keys(activityResponsible) as ActivityResponsible[]).map((r) => <option key={r} value={r}>{activityResponsible[r].label}</option>)}
+                          </select>
+                          <button type="button" onClick={() => removeActivity(s.name, a.id)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label="Remover etapa">
                             <Trash2 className="size-3" />
                           </button>
                         </div>
                       ))}
                       <button type="button" onClick={() => addActivity(s.name)} className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-primary hover:underline">
-                        <Plus className="size-3" /> Adicionar atividade
+                        <Plus className="size-3" /> Adicionar etapa
                       </button>
                     </div>
                   </div>

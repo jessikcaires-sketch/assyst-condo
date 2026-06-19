@@ -2,6 +2,7 @@ import type {
   ActionCategory,
   ActionStatus,
   BidStatus,
+  ActivityResponsible,
   CondoStatus,
   ContactRole,
   Coverage,
@@ -54,15 +55,25 @@ export const serviceProgress: Record<ServiceProgress, Label> = {
 /** Ordem das colunas no quadro de projetos. */
 export const projectFlow: ServiceProgress[] = ["liberado", "em_andamento", "entregue"];
 
-/** Atividades-padrão de um projeto de Inspeção Predial. */
-export const DEFAULT_PROJECT_ACTIVITIES: string[] = [
-  "Agendamento",
-  "Vistoria",
-  "Separação do material",
-  "Montagem do laudo",
-  "Revisão do laudo",
-  "Emissão da ART",
-  "Apresentação do laudo",
+export const activityResponsible: Record<ActivityResponsible, Label> = {
+  assyst: { label: "Assyst", tone: "info" },
+  condominio: { label: "Condomínio", tone: "copper" },
+};
+
+/** Modelo de etapa padrão (label + responsável). */
+export interface DefaultActivity {
+  label: string;
+  responsible: ActivityResponsible;
+}
+
+/** Etapas-padrão de um laudo pontual (na ordem do fluxo). */
+export const LAUDO_ACTIVITIES: DefaultActivity[] = [
+  { label: "Coleta de documentação", responsible: "condominio" },
+  { label: "Anamnese", responsible: "assyst" },
+  { label: "Vistoria / Inspeção", responsible: "assyst" },
+  { label: "Elaboração do laudo", responsible: "assyst" },
+  { label: "Apresentação", responsible: "assyst" },
+  { label: "Entrega final", responsible: "assyst" },
 ];
 
 /** Tipo predefinido de cada serviço (pode ser alterado por condomínio). */
@@ -86,13 +97,12 @@ export function serviceDefaultKind(name: string): ServiceKind {
   return SERVICE_DEFAULT_KIND[name] ?? "recorrente";
 }
 
-/** Atividades-padrão por serviço (só Inspeção Predial vem com checklist). */
-const SERVICE_DEFAULT_ACTIVITIES: Record<string, string[]> = {
-  "Inspeção predial": DEFAULT_PROJECT_ACTIVITIES,
-};
-
-export function serviceDefaultActivities(name: string): string[] {
-  return SERVICE_DEFAULT_ACTIVITIES[name] ?? [];
+/**
+ * Etapas-padrão de um serviço pontual. Hoje todos os pontuais são laudos e
+ * usam o mesmo fluxo; o usuário pode editar as etapas em cada condomínio.
+ */
+export function serviceDefaultActivities(_name: string): DefaultActivity[] {
+  return LAUDO_ACTIVITIES;
 }
 
 export const condoStatus: Record<CondoStatus, Label> = {

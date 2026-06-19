@@ -113,11 +113,25 @@ export type ServiceKind = "recorrente" | "pontual";
 /** Andamento de um serviço/projeto. */
 export type ServiceProgress = "liberado" | "em_andamento" | "entregue";
 
-/** Uma etapa/atividade dentro de um projeto pontual (ex.: inspeção predial). */
+/** De quem é a pendência de uma etapa. */
+export type ActivityResponsible = "assyst" | "condominio";
+
+/** Uma etapa/atividade dentro de um serviço pontual (laudo). */
 export interface ServiceActivity {
   id: ID;
   label: string;
   done: boolean;
+  dueDate?: ISODate; // prazo da etapa
+  responsible?: ActivityResponsible; // de quem depende
+  completedAt?: ISODate; // data em que foi concluída
+}
+
+/** Entrada da timeline/histórico de um serviço pontual. */
+export interface ServiceLogEntry {
+  id: ID;
+  at: ISODate; // data do registro
+  text: string;
+  auto?: boolean; // gerado pelo sistema (mudança de status/etapa)
 }
 
 /** A service line from the contract, flagged in-contract or courtesy. */
@@ -132,6 +146,12 @@ export interface ContractedService {
   value?: number;
   /** Previsão de entrega (data) — serviço pontual. */
   dueDate?: ISODate;
+  /** Data de liberação (início do prazo). */
+  releasedAt?: ISODate;
+  /** Data de entrega final. */
+  deliveredAt?: ISODate;
+  /** Timeline/histórico do laudo. */
+  history?: ServiceLogEntry[];
 }
 
 /** A person tied to the condo (síndico, zelador, gerente predial, etc.). */

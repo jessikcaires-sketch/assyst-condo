@@ -3,7 +3,7 @@
 import * as React from "react";
 import { X, Building2, CheckCircle2, Plus, Trash2, ImagePlus, Search, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { condoStatus, contactRole, coverage, serviceKind, serviceProgress, serviceDefaultKind, serviceDefaultActivities } from "@/lib/domain";
+import { condoStatus, contactRole, coverage, serviceProgress, serviceDefaultKind, serviceDefaultActivities } from "@/lib/domain";
 import { useCatalogs } from "@/lib/catalog-store";
 import type {
   Condominium,
@@ -377,78 +377,94 @@ export function CondoDialog({
             <Plus className="size-4" /> Adicionar
           </button>
         </div>
-        {services.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {services.map((s) => (
-              <li key={s.name} className="rounded-md border bg-muted/30 px-3 py-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+        {services.some((s) => (s.kind ?? "recorrente") === "recorrente") && (
+          <div className="mt-3">
+            <p className="mb-1.5 font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Recorrentes</p>
+            <ul className="space-y-1.5">
+              {services.filter((s) => (s.kind ?? "recorrente") === "recorrente").map((s) => (
+                <li key={s.name} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                  <span className="flex min-w-0 items-center gap-2 font-medium">
                     <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: serviceDot(s.name, cat.services) }} />
                     <span className="truncate">{s.name}</span>
                   </span>
-                  <button type="button" onClick={() => toggleService(s.name)} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label={`Remover ${s.name}`}>
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <select aria-label="Tipo" value={s.kind ?? "recorrente"} onChange={(e) => setServiceKind(s.name, e.target.value as ServiceKind)} className={miniSelect}>
-                    {(Object.keys(serviceKind) as ServiceKind[]).map((k) => <option key={k} value={k}>{serviceKind[k].label}</option>)}
-                  </select>
-                  <select aria-label="Status" value={s.progress ?? "em_andamento"} onChange={(e) => setServiceField(s.name, { progress: e.target.value as ServiceProgress })} className={miniSelect}>
-                    {(Object.keys(serviceProgress) as ServiceProgress[]).map((p) => <option key={p} value={p}>{serviceProgress[p].label}</option>)}
-                  </select>
-                  <select aria-label="Cobertura" value={s.coverage} onChange={(e) => setServiceField(s.name, { coverage: e.target.value as Coverage })} className={miniSelect}>
-                    {(Object.keys(coverage) as Coverage[]).map((c) => <option key={c} value={c}>{coverage[c].label}</option>)}
-                  </select>
-                </div>
+                  <div className="flex items-center gap-1.5">
+                    <select aria-label="Cobertura" value={s.coverage} onChange={(e) => setServiceField(s.name, { coverage: e.target.value as Coverage })} className={miniSelect}>
+                      {(Object.keys(coverage) as Coverage[]).map((c) => <option key={c} value={c}>{coverage[c].label}</option>)}
+                    </select>
+                    <button type="button" onClick={() => setServiceKind(s.name, "pontual")} className="rounded border px-2 py-1 text-[0.6875rem] font-medium text-muted-foreground transition-colors hover:bg-muted">→ Pontual</button>
+                    <button type="button" onClick={() => toggleService(s.name)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label={`Remover ${s.name}`}>
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-                {s.kind === "pontual" && (
-                  <div className="mt-2.5 space-y-2 border-t pt-2.5">
-                    <div className="flex flex-wrap items-center gap-4">
-                      <label className="flex items-center gap-2">
-                        <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Valor (R$)</span>
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={s.value ?? ""}
-                          onChange={(e) => setServiceField(s.name, { value: e.target.value === "" ? undefined : Number(e.target.value) })}
-                          placeholder="0,00"
-                          className={cn(miniInput, "w-28")}
-                        />
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Previsão de entrega</span>
-                        <input
-                          type="date"
-                          value={s.dueDate ?? ""}
-                          onChange={(e) => setServiceField(s.name, { dueDate: e.target.value || undefined })}
-                          className={cn(miniInput, "w-36")}
-                        />
-                      </label>
-                    </div>
-                    <div>
-                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Atividades</span>
-                      <div className="mt-1 space-y-1">
-                        {(s.activities ?? []).map((a) => (
-                          <div key={a.id} className="flex items-center gap-2">
-                            <input type="checkbox" checked={a.done} onChange={() => toggleActivity(s.name, a.id)} className="size-3.5 shrink-0 accent-primary" aria-label={`Concluir ${a.label}`} />
-                            <input value={a.label} onChange={(e) => renameActivity(s.name, a.id, e.target.value)} placeholder="Atividade…" className={cn(miniInput, "flex-1", a.done && "line-through opacity-60")} />
-                            <button type="button" onClick={() => removeActivity(s.name, a.id)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label="Remover atividade">
-                              <Trash2 className="size-3" />
-                            </button>
-                          </div>
-                        ))}
-                        <button type="button" onClick={() => addActivity(s.name)} className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-primary hover:underline">
-                          <Plus className="size-3" /> Adicionar atividade
-                        </button>
-                      </div>
+        {services.some((s) => s.kind === "pontual") && (
+          <div className="mt-3">
+            <p className="mb-1.5 font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Pontuais</p>
+            <ul className="space-y-2">
+              {services.filter((s) => s.kind === "pontual").map((s) => (
+                <li key={s.name} className="rounded-md border bg-muted/30 px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: serviceDot(s.name, cat.services) }} />
+                      <span className="truncate">{s.name}</span>
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button type="button" onClick={() => setServiceKind(s.name, "recorrente")} className="rounded border px-2 py-1 text-[0.6875rem] font-medium text-muted-foreground transition-colors hover:bg-muted">→ Recorrente</button>
+                      <button type="button" onClick={() => toggleService(s.name)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label={`Remover ${s.name}`}>
+                        <Trash2 className="size-3.5" />
+                      </button>
                     </div>
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-1.5">
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Status</span>
+                      <select aria-label="Status" value={s.progress ?? "liberado"} onChange={(e) => setServiceField(s.name, { progress: e.target.value as ServiceProgress })} className={miniSelect}>
+                        {(Object.keys(serviceProgress) as ServiceProgress[]).map((p) => <option key={p} value={p}>{serviceProgress[p].label}</option>)}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Cobertura</span>
+                      <select aria-label="Cobertura" value={s.coverage} onChange={(e) => setServiceField(s.name, { coverage: e.target.value as Coverage })} className={miniSelect}>
+                        {(Object.keys(coverage) as Coverage[]).map((c) => <option key={c} value={c}>{coverage[c].label}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Valor (R$)</span>
+                      <input type="number" min={0} step="0.01" value={s.value ?? ""} onChange={(e) => setServiceField(s.name, { value: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="0,00" className={cn(miniInput, "w-28")} />
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Previsão de entrega</span>
+                      <input type="date" value={s.dueDate ?? ""} onChange={(e) => setServiceField(s.name, { dueDate: e.target.value || undefined })} className={cn(miniInput, "w-36")} />
+                    </label>
+                  </div>
+                  <div className="mt-2">
+                    <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Atividades</span>
+                    <div className="mt-1 space-y-1">
+                      {(s.activities ?? []).map((a) => (
+                        <div key={a.id} className="flex items-center gap-2">
+                          <input type="checkbox" checked={a.done} onChange={() => toggleActivity(s.name, a.id)} className="size-3.5 shrink-0 accent-primary" aria-label={`Concluir ${a.label}`} />
+                          <input value={a.label} onChange={(e) => renameActivity(s.name, a.id, e.target.value)} placeholder="Atividade…" className={cn(miniInput, "flex-1", a.done && "line-through opacity-60")} />
+                          <button type="button" onClick={() => removeActivity(s.name, a.id)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label="Remover atividade">
+                            <Trash2 className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => addActivity(s.name)} className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-primary hover:underline">
+                        <Plus className="size-3" /> Adicionar atividade
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {/* Contatos */}

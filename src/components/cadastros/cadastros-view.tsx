@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Panel, PanelHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCatalogs } from "@/lib/catalog-store";
-import { serviceColor } from "@/lib/service-color";
+import { serviceColorAt } from "@/lib/service-color";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -181,10 +181,10 @@ function StringListPanel({
         </div>
       ) : (
         <ul className="flex flex-wrap gap-2 px-5 py-4">
-          {items.map((it) => (
+          {items.map((it, i) => (
             <li
               key={it}
-              style={colored ? serviceColor(it) : undefined}
+              style={colored ? serviceColorAt(i) : undefined}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md border py-1 pl-3 pr-1.5 text-sm",
                 !colored && "bg-muted/30",

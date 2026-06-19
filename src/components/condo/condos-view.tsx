@@ -125,7 +125,7 @@ export function CondosView() {
                   {c.services.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {c.services.map((s) => (
-                        <span key={s.name} style={serviceColor(s.name)} className="w-fit rounded border px-2 py-0.5 text-xs font-medium">
+                        <span key={s.name} style={serviceColor(s.name, cat.services)} className="w-fit rounded border px-2 py-0.5 text-xs font-medium">
                           {s.name}
                         </span>
                       ))}

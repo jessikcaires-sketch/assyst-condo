@@ -3,7 +3,13 @@ import { Panel } from "@/components/ui/card";
 import { serviceColor } from "@/lib/service-color";
 import type { ContractedService } from "@/lib/types";
 
-export function ServiceScope({ services }: { services: ContractedService[] }) {
+export function ServiceScope({
+  services,
+  catalogServices,
+}: {
+  services: ContractedService[];
+  catalogServices?: string[];
+}) {
   const contrato = services.filter((s) => s.coverage === "contrato");
   const cortesia = services.filter((s) => s.coverage === "cortesia");
 
@@ -33,7 +39,7 @@ export function ServiceScope({ services }: { services: ContractedService[] }) {
             {contrato.map((s, i) => (
               <span
                 key={i}
-                style={serviceColor(s.name)}
+                style={serviceColor(s.name, catalogServices)}
                 className="inline-flex items-center rounded-md border px-2.5 py-1 text-sm font-medium"
               >
                 {s.name}
@@ -57,7 +63,7 @@ export function ServiceScope({ services }: { services: ContractedService[] }) {
             {cortesia.map((s, i) => (
               <span
                 key={i}
-                style={serviceColor(s.name)}
+                style={serviceColor(s.name, catalogServices)}
                 className="inline-flex items-center rounded-md border px-2.5 py-1 text-sm font-medium"
               >
                 {s.name}

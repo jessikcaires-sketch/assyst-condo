@@ -15,7 +15,7 @@ import type {
 } from "@/lib/types";
 import type { CondoInput } from "@/lib/condo-store";
 import { compressImage } from "@/lib/image";
-import { serviceColor, serviceDot } from "@/lib/service-color";
+import { serviceColor, serviceColorAt, serviceDot } from "@/lib/service-color";
 import { cn } from "@/lib/utils";
 
 const STATUSES = Object.keys(condoStatus) as CondoStatus[];
@@ -290,14 +290,14 @@ export function CondoDialog({
         {/* Serviços */}
         <Section title="Escopo de serviços" hint="Marque os serviços prestados neste condomínio" />
         <div className="flex flex-wrap gap-1.5">
-          {cat.services.map((name) => {
+          {cat.services.map((name, i) => {
             const active = hasService(name);
             return (
               <button
                 key={name}
                 type="button"
                 onClick={() => toggleService(name)}
-                style={active ? serviceColor(name) : undefined}
+                style={active ? serviceColorAt(i) : undefined}
                 className={cn(
                   "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                   active ? "" : "bg-card text-muted-foreground hover:bg-muted",
@@ -325,7 +325,7 @@ export function CondoDialog({
             {services.map((s) => (
               <li key={s.name} className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm">
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: serviceDot(s.name) }} />
+                  <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: serviceDot(s.name, cat.services) }} />
                   <span className="truncate">{s.name}</span>
                 </span>
                 <div className="flex shrink-0 items-center gap-1">

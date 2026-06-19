@@ -189,7 +189,7 @@ export function CondoDetail() {
           </div>
         )}
 
-        <ServiceScope services={condo.services} />
+        <ServiceScope services={condo.services} catalogServices={cat.services} />
 
         {/* Resumo executivo */}
         <section>

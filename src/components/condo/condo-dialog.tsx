@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { X, Building2, CheckCircle2, Plus, Trash2, ImagePlus } from "lucide-react";
+import { X, Building2, CheckCircle2, Plus, Trash2, ImagePlus, Search, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { condoStatus, contactRole, coverage } from "@/lib/domain";
 import { useCatalogs } from "@/lib/catalog-store";
@@ -55,6 +55,8 @@ export function CondoDialog({
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [customService, setCustomService] = React.useState("");
   const [photoUrl, setPhotoUrl] = React.useState<string | undefined>(undefined);
+  const [cnpjState, setCnpjState] = React.useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [cnpjMsg, setCnpjMsg] = React.useState("");
 
   // Recarrega o formulário sempre que abrir (novo) ou trocar o alvo (edição).
   React.useEffect(() => {
@@ -74,9 +76,33 @@ export function CondoDialog({
     setContacts(initial?.contacts ?? []);
     setCustomService("");
     setPhotoUrl(initial?.photoUrl);
+    setCnpjState("idle");
+    setCnpjMsg("");
   }, [open, initial, cat.responsibles]);
 
   if (!open) return null;
+
+  async function buscarCnpj() {
+    const digits = form.cnpj.replace(/\D/g, "");
+    if (digits.length !== 14) {
+      setCnpjState("error");
+      setCnpjMsg("Digite os 14 dígitos do CNPJ.");
+      return;
+    }
+    setCnpjState("loading");
+    setCnpjMsg("");
+    try {
+      const res = await fetch(`/api/cnpj/${digits}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "falha");
+      setForm((f) => ({ ...f, address: data.address || f.address }));
+      setCnpjState("ok");
+      setCnpjMsg(data.razaoSocial ? `✓ ${data.razaoSocial}` : "✓ Endereço preenchido.");
+    } catch {
+      setCnpjState("error");
+      setCnpjMsg("Não encontrei. Confira o CNPJ e tente de novo.");
+    }
+  }
 
   async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -171,7 +197,30 @@ export function CondoDialog({
             <input value={form.name} onChange={set("name")} className={inputCls} placeholder="Ex.: Condomínio Hit High" />
           </Field>
           <Field label="CNPJ">
-            <input value={form.cnpj} onChange={set("cnpj")} className={inputCls} placeholder="00.000.000/0000-00" />
+            <div className="flex gap-2">
+              <input
+                value={form.cnpj}
+                onChange={set("cnpj")}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); buscarCnpj(); } }}
+                className={cn(inputCls, "flex-1")}
+                placeholder="00.000.000/0000-00"
+              />
+              <button
+                type="button"
+                onClick={buscarCnpj}
+                disabled={cnpjState === "loading"}
+                title="Buscar endereço pelo CNPJ"
+                className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md border bg-card px-2.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                {cnpjState === "loading" ? <Loader2 className="size-3.5 animate-spin" /> : <Search className="size-3.5" />}
+                Endereço
+              </button>
+            </div>
+            {cnpjMsg && (
+              <span className={cn("mt-1 block text-[0.6875rem]", cnpjState === "error" ? "text-danger" : "text-success")}>
+                {cnpjMsg}
+              </span>
+            )}
           </Field>
           <Field label="Administradora">
             <input value={form.administrator} onChange={set("administrator")} list="adm-list" className={inputCls} placeholder="Selecione ou digite" />

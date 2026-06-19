@@ -24,6 +24,7 @@ import { currentUser } from "@/lib/mock-data";
 import { fmtDate, TODAY } from "@/lib/domain";
 import { CondoStoreProvider } from "@/lib/condo-store";
 import { CatalogStoreProvider } from "@/lib/catalog-store";
+import { ImportBanner } from "@/components/import-banner";
 
 interface NavItem {
   href: string;
@@ -147,6 +148,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="lg:pl-[15.5rem]">
         <Topbar onMenu={() => setOpen(true)} />
+        <ImportBanner />
         <main className="app-content bg-canvas min-h-[calc(100dvh-3.5rem)]">{children}</main>
       </div>
     </div>

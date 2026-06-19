@@ -5,102 +5,103 @@ import type { Condominium } from "./types";
 import { seedCondominiums } from "./mock-data";
 
 /**
- * Registro de condomínios com persistência local (localStorage). Permite
- * cadastrar/editar pelo próprio sistema sem backend; ao plugar o Supabase,
- * troca-se este provider por chamadas reais mantendo a mesma API.
+ * Registro de condomínios — agora persistido no banco (Postgres) via /api.
+ * Mantém a mesma API de hooks que a UI já usa. A renderização inicial mostra
+ * a seed (igual ao SSR) e em seguida sincroniza com o banco.
  */
-
-const STORAGE_KEY = "assyst.condos";
-const STORAGE_VERSION = 1; // bump para re-semear a carteira
-
-const zeroMetrics = (): Condominium["valueMetrics"] => ({
-  visitsDone: 0,
-  worksSupervised: 0,
-  unitsVisited: 0,
-  diagnostics: 0,
-  diagnosticsCourtesy: 0,
-  bids: 0,
-  reports: 0,
-});
 
 export type CondoInput = Omit<Condominium, "id" | "valueMetrics">;
 
 interface CondoStore {
   condos: Condominium[];
   getCondo: (id: string) => Condominium | undefined;
-  addCondo: (input: CondoInput) => Condominium;
-  updateCondo: (id: string, patch: Partial<CondoInput>) => void;
-  removeCondo: (id: string) => void;
+  addCondo: (input: CondoInput) => Promise<Condominium | null>;
+  updateCondo: (id: string, patch: Partial<CondoInput>) => Promise<void>;
+  removeCondo: (id: string) => Promise<void>;
+  refresh: () => Promise<void>;
   hydrated: boolean;
+  /** true quando o banco não respondeu (ex.: DATABASE_URL ausente). */
+  offline: boolean;
 }
 
 const Ctx = React.createContext<CondoStore | null>(null);
 
-interface Persisted {
-  version: number;
-  condos: Condominium[];
-}
-
-function load(): Condominium[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Persisted;
-    if (parsed.version !== STORAGE_VERSION || !Array.isArray(parsed.condos)) return null;
-    return parsed.condos;
-  } catch {
-    return null;
-  }
-}
-
-function save(condos: Condominium[]) {
-  if (typeof window === "undefined") return;
-  try {
-    const payload: Persisted = { version: STORAGE_VERSION, condos };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    /* quota / private mode — ignore */
-  }
-}
-
 export function CondoStoreProvider({ children }: { children: React.ReactNode }) {
-  // Primeira renderização usa a seed (igual ao SSR) para evitar hydration mismatch.
   const [condos, setCondos] = React.useState<Condominium[]>(seedCondominiums);
   const [hydrated, setHydrated] = React.useState(false);
+  const [offline, setOffline] = React.useState(false);
+
+  const refresh = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/condos", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { condos: Condominium[] };
+      setCondos(data.condos);
+      setOffline(false);
+    } catch {
+      setOffline(true);
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
 
   React.useEffect(() => {
-    const stored = load();
-    if (stored) setCondos(stored);
-    else save(seedCondominiums);
-    setHydrated(true);
-  }, []);
-
-  const persist = React.useCallback((next: Condominium[]) => {
-    setCondos(next);
-    save(next);
-  }, []);
+    refresh();
+  }, [refresh]);
 
   const api = React.useMemo<CondoStore>(() => ({
     condos,
     hydrated,
+    offline,
+    refresh,
     getCondo: (id) => condos.find((c) => c.id === id),
-    addCondo: (input) => {
-      const condo: Condominium = {
-        ...input,
-        id: `condo-${Date.now()}-${Math.floor(performance.now())}`,
-        valueMetrics: zeroMetrics(),
-      };
-      persist([...condos, condo]);
-      return condo;
+
+    addCondo: async (input) => {
+      try {
+        const res = await fetch("/api/condos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { condo } = (await res.json()) as { condo: Condominium };
+        setCondos((prev) => [...prev, condo]);
+        return condo;
+      } catch {
+        setOffline(true);
+        return null;
+      }
     },
-    updateCondo: (id, patch) => {
-      persist(condos.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+
+    updateCondo: async (id, patch) => {
+      // Otimista: aplica já na tela, depois confirma no banco.
+      setCondos((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+      try {
+        const res = await fetch(`/api/condos/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { condo } = (await res.json()) as { condo: Condominium };
+        setCondos((prev) => prev.map((c) => (c.id === id ? condo : c)));
+      } catch {
+        setOffline(true);
+      }
     },
-    removeCondo: (id) => {
-      persist(condos.filter((c) => c.id !== id));
+
+    removeCondo: async (id) => {
+      const snapshot = condos;
+      setCondos((prev) => prev.filter((c) => c.id !== id));
+      try {
+        const res = await fetch(`/api/condos/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch {
+        setCondos(snapshot); // reverte se falhar
+        setOffline(true);
+      }
     },
-  }), [condos, hydrated, persist]);
+  }), [condos, hydrated, offline, refresh]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }
@@ -111,7 +112,6 @@ export function useCondoStore(): CondoStore {
   return ctx;
 }
 
-/** Açúcar para listar a carteira. */
 export function useCondos(): Condominium[] {
   return useCondoStore().condos;
 }

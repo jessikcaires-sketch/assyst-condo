@@ -6,13 +6,9 @@ import { users as seedUsers } from "./mock-data";
 import { SERVICE_CATALOG } from "./domain";
 
 /**
- * Catálogos dinâmicos — listas editáveis pelo sistema que alimentam os
- * seletores (responsáveis, serviços, administradoras…). Persistidas em
- * localStorage; trocáveis por tabelas do Supabase mantendo a mesma API.
+ * Catálogos dinâmicos (responsáveis, serviços, administradoras) — agora no
+ * banco via /api/catalogs. Mantém a mesma API de hooks da UI.
  */
-
-const STORAGE_KEY = "assyst.catalogs";
-const STORAGE_VERSION = 1;
 
 export type Responsible = User;
 
@@ -23,11 +19,7 @@ export interface Catalogs {
 }
 
 function seed(): Catalogs {
-  return {
-    responsibles: seedUsers,
-    services: [...SERVICE_CATALOG],
-    administrators: [],
-  };
+  return { responsibles: seedUsers, services: [...SERVICE_CATALOG], administrators: [] };
 }
 
 export function initialsFrom(name: string): string {
@@ -39,68 +31,69 @@ export function initialsFrom(name: string): string {
 
 interface CatalogStore extends Catalogs {
   hydrated: boolean;
+  offline: boolean;
+  refresh: () => Promise<void>;
   getResponsible: (id: string) => Responsible | undefined;
-  addResponsible: (input: { name: string; role?: User["role"]; email?: string }) => Responsible;
-  updateResponsible: (id: string, patch: Partial<Omit<Responsible, "id">>) => void;
-  removeResponsible: (id: string) => void;
-  addService: (name: string) => void;
-  removeService: (name: string) => void;
-  addAdministrator: (name: string) => void;
-  removeAdministrator: (name: string) => void;
+  addResponsible: (input: { name: string; role?: User["role"]; email?: string }) => Promise<Responsible | null>;
+  updateResponsible: (id: string, patch: Partial<Omit<Responsible, "id">>) => Promise<void>;
+  removeResponsible: (id: string) => Promise<void>;
+  addService: (name: string) => Promise<void>;
+  removeService: (name: string) => Promise<void>;
+  addAdministrator: (name: string) => Promise<void>;
+  removeAdministrator: (name: string) => Promise<void>;
 }
 
 const Ctx = React.createContext<CatalogStore | null>(null);
 
-interface Persisted {
-  version: number;
-  catalogs: Catalogs;
-}
-
-function load(): Catalogs | null {
-  if (typeof window === "undefined") return null;
+async function mutate(body: unknown): Promise<Catalogs | null> {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Persisted;
-    if (parsed.version !== STORAGE_VERSION) return null;
-    const c = parsed.catalogs;
-    if (!c || !Array.isArray(c.responsibles) || !Array.isArray(c.services) || !Array.isArray(c.administrators)) return null;
-    return c;
+    const res = await fetch("/api/catalogs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as Catalogs;
   } catch {
     return null;
-  }
-}
-
-function save(catalogs: Catalogs) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, catalogs } satisfies Persisted));
-  } catch {
-    /* ignore */
   }
 }
 
 export function CatalogStoreProvider({ children }: { children: React.ReactNode }) {
   const [catalogs, setCatalogs] = React.useState<Catalogs>(seed);
   const [hydrated, setHydrated] = React.useState(false);
+  const [offline, setOffline] = React.useState(false);
+
+  const refresh = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/catalogs", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setCatalogs((await res.json()) as Catalogs);
+      setOffline(false);
+    } catch {
+      setOffline(true);
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
 
   React.useEffect(() => {
-    const stored = load();
-    if (stored) setCatalogs(stored);
-    else save(seed());
-    setHydrated(true);
-  }, []);
+    refresh();
+  }, [refresh]);
 
-  const persist = React.useCallback((next: Catalogs) => {
-    setCatalogs(next);
-    save(next);
-  }, []);
+  const apply = (c: Catalogs | null) => {
+    if (c) setCatalogs(c);
+    else setOffline(true);
+  };
 
   const api = React.useMemo<CatalogStore>(() => ({
     ...catalogs,
     hydrated,
+    offline,
+    refresh,
     getResponsible: (id) => catalogs.responsibles.find((r) => r.id === id),
-    addResponsible: (input) => {
+
+    addResponsible: async (input) => {
       const r: Responsible = {
         id: `resp-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
         name: input.name.trim(),
@@ -108,37 +101,33 @@ export function CatalogStoreProvider({ children }: { children: React.ReactNode }
         role: input.role ?? "engenheiro",
         initials: initialsFrom(input.name),
       };
-      persist({ ...catalogs, responsibles: [...catalogs.responsibles, r] });
+      apply(await mutate({ kind: "responsible", op: "add", value: r }));
       return r;
     },
-    updateResponsible: (id, patch) => {
-      persist({
-        ...catalogs,
-        responsibles: catalogs.responsibles.map((r) =>
-          r.id === id ? { ...r, ...patch, initials: patch.name ? initialsFrom(patch.name) : r.initials } : r,
-        ),
-      });
+    updateResponsible: async (id, patch) => {
+      const next = patch.name ? { ...patch, initials: initialsFrom(patch.name) } : patch;
+      apply(await mutate({ kind: "responsible", op: "update", id, patch: next }));
     },
-    removeResponsible: (id) => {
-      persist({ ...catalogs, responsibles: catalogs.responsibles.filter((r) => r.id !== id) });
+    removeResponsible: async (id) => {
+      apply(await mutate({ kind: "responsible", op: "remove", id }));
     },
-    addService: (name) => {
+    addService: async (name) => {
       const n = name.trim();
       if (!n || catalogs.services.includes(n)) return;
-      persist({ ...catalogs, services: [...catalogs.services, n] });
+      apply(await mutate({ kind: "service", op: "add", name: n }));
     },
-    removeService: (name) => {
-      persist({ ...catalogs, services: catalogs.services.filter((s) => s !== name) });
+    removeService: async (name) => {
+      apply(await mutate({ kind: "service", op: "remove", name }));
     },
-    addAdministrator: (name) => {
+    addAdministrator: async (name) => {
       const n = name.trim();
       if (!n || catalogs.administrators.includes(n)) return;
-      persist({ ...catalogs, administrators: [...catalogs.administrators, n] });
+      apply(await mutate({ kind: "administrator", op: "add", name: n }));
     },
-    removeAdministrator: (name) => {
-      persist({ ...catalogs, administrators: catalogs.administrators.filter((a) => a !== name) });
+    removeAdministrator: async (name) => {
+      apply(await mutate({ kind: "administrator", op: "remove", name }));
     },
-  }), [catalogs, hydrated, persist]);
+  }), [catalogs, hydrated, offline, refresh]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

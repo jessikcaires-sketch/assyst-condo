@@ -22,11 +22,19 @@ export function CondosView() {
   const cat = useCatalogs();
   const [openNew, setOpenNew] = React.useState(false);
   const [view, setView] = React.useState<View>("cards");
+  const [nature, setNature] = React.useState<"" | "recorrente" | "pontual">("");
 
   const respName = (id: string) => cat.getResponsible(id)?.name ?? "—";
   const respInitials = (id: string) => cat.getResponsible(id)?.initials ?? "—";
 
-  const rows: CondoRow[] = condos.map((c) => {
+  const shown = condos.filter((c) => {
+    if (!nature) return true;
+    const hasRec = c.services.some((s) => (s.kind ?? "recorrente") === "recorrente");
+    const hasPon = c.services.some((s) => s.kind === "pontual");
+    return nature === "recorrente" ? hasRec : hasPon;
+  });
+
+  const rows: CondoRow[] = shown.map((c) => {
     const stats = getCondoStats(c.id);
     return {
       id: c.id,
@@ -53,7 +61,12 @@ export function CondosView() {
         title="Condomínios"
         description="Carteira de condomínios sob gestão da Assyst. Filtre por responsável, administradora ou status e abra o painel de cada um."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-md border bg-card p-0.5 text-sm">
+              <NatureBtn active={nature === ""} onClick={() => setNature("")}>Todos</NatureBtn>
+              <NatureBtn active={nature === "recorrente"} onClick={() => setNature("recorrente")}>Recorrentes</NatureBtn>
+              <NatureBtn active={nature === "pontual"} onClick={() => setNature("pontual")}>Pontuais</NatureBtn>
+            </div>
             <div className="inline-flex rounded-md border bg-card p-0.5">
               <ViewBtn active={view === "cards"} onClick={() => setView("cards")} icon={LayoutGrid} label="Cards" />
               <ViewBtn active={view === "lista"} onClick={() => setView("lista")} icon={ListIcon} label="Lista" />
@@ -84,7 +97,7 @@ export function CondosView() {
   function CardsGrid() {
     return (
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-        {condos.map((c) => {
+        {shown.map((c) => {
           const stats = getCondoStats(c.id);
           const cs = condoStatus[c.status];
           const contract = contractSignal(c.contractEnd);
@@ -174,6 +187,21 @@ function ViewBtn({
       )}
     >
       <Icon className="size-4" /> {label}
+    </button>
+  );
+}
+
+function NatureBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-8 items-center rounded px-2.5 text-sm font-medium transition-colors",
+        active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+      )}
+    >
+      {children}
     </button>
   );
 }

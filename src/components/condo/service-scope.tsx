@@ -1,6 +1,7 @@
 "use client";
 
-import { ScrollText, Repeat, FolderKanban } from "lucide-react";
+import * as React from "react";
+import { ScrollText, Repeat, FolderKanban, ChevronRight } from "lucide-react";
 import { Panel } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { serviceColor } from "@/lib/service-color";
@@ -22,6 +23,14 @@ export function ServiceScope({
 }) {
   const recorrentes = services.filter((s) => (s.kind ?? "recorrente") === "recorrente");
   const pontuais = services.filter((s) => s.kind === "pontual");
+  const [open, setOpen] = React.useState<Set<string>>(new Set());
+  const toggleOpen = (name: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
 
   const patch = (name: string, p: Partial<ContractedService>) =>
     onChange?.(services.map((s) => (s.name === name ? { ...s, ...p } : s)));
@@ -82,46 +91,50 @@ export function ServiceScope({
           {pontuais.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum projeto pontual.</p>
           ) : (
-            <div className="space-y-3">
+            <ul className="divide-y overflow-hidden rounded-lg border">
               {pontuais.map((s) => {
                 const acts = s.activities ?? [];
                 const done = acts.filter((a) => a.done).length;
                 const prog = s.progress ?? "liberado";
+                const isOpen = open.has(s.name);
                 return (
-                  <div key={s.name} className="rounded-lg border bg-card p-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span style={serviceColor(s.name, catalogServices)} className="inline-flex items-center rounded-md border px-2.5 py-1 text-sm font-semibold">
-                        {s.name}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {typeof s.value === "number" && (
-                          <span className="font-mono text-xs text-muted-foreground">{fmtMoney(s.value)}</span>
+                  <li key={s.name}>
+                    <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+                      <button
+                        type="button"
+                        onClick={() => acts.length > 0 && toggleOpen(s.name)}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      >
+                        {acts.length > 0 && (
+                          <ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-90")} />
                         )}
-                        {onChange ? (
-                          <select
-                            aria-label="Status do projeto"
-                            value={prog}
-                            onChange={(e) => patch(s.name, { progress: e.target.value as ServiceProgress })}
-                            className="h-7 rounded-md border bg-card px-2 text-xs outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-                          >
-                            {PROGRESS.map((p) => <option key={p} value={p}>{serviceProgress[p].label}</option>)}
-                          </select>
-                        ) : (
-                          <Badge tone={serviceProgress[prog].tone} dot>{serviceProgress[prog].label}</Badge>
-                        )}
-                      </div>
+                        <span style={serviceColor(s.name, catalogServices)} className="inline-flex items-center rounded-md border px-2 py-0.5 text-sm font-medium">
+                          {s.name}
+                        </span>
+                      </button>
+                      {acts.length > 0 && (
+                        <span className="font-mono text-xs text-muted-foreground">{done}/{acts.length}</span>
+                      )}
+                      {typeof s.value === "number" && (
+                        <span className="font-mono text-xs text-muted-foreground">{fmtMoney(s.value)}</span>
+                      )}
+                      {onChange ? (
+                        <select
+                          aria-label="Status do projeto"
+                          value={prog}
+                          onChange={(e) => patch(s.name, { progress: e.target.value as ServiceProgress })}
+                          className="h-7 rounded-md border bg-card px-2 text-xs outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                        >
+                          {PROGRESS.map((p) => <option key={p} value={p}>{serviceProgress[p].label}</option>)}
+                        </select>
+                      ) : (
+                        <Badge tone={serviceProgress[prog].tone} dot>{serviceProgress[prog].label}</Badge>
+                      )}
                     </div>
 
-                    {acts.length > 0 && (
-                      <div className="mt-3">
-                        <div className="mb-1.5 flex items-center justify-between text-[0.6875rem] text-muted-foreground">
-                          <span className="font-mono uppercase tracking-wide">Atividades</span>
-                          <span className="font-mono">{done}/{acts.length}</span>
-                        </div>
-                        <div className="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-success transition-all" style={{ width: `${acts.length ? (done / acts.length) * 100 : 0}%` }} />
-                        </div>
-                        <ul className="grid gap-1 sm:grid-cols-2">
+                    {isOpen && acts.length > 0 && (
+                      <div className="bg-muted/20 px-3 pb-3 pl-9">
+                        <ul className="grid gap-1 pt-1 sm:grid-cols-2">
                           {acts.map((a) => (
                             <li key={a.id}>
                               <label className={cn("flex cursor-pointer items-center gap-2 text-sm", a.done && "text-muted-foreground")}>
@@ -139,10 +152,10 @@ export function ServiceScope({
                         </ul>
                       </div>
                     )}
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </section>
       </div>

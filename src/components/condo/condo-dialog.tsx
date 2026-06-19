@@ -445,6 +445,10 @@ export function CondoDialog({
                       <input type="number" min={0} step="0.01" value={s.value ?? ""} onChange={(e) => setServiceField(s.name, { value: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="0,00" className={cn(miniInput, "w-28")} />
                     </label>
                     <label className="flex items-center gap-2">
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Liberação</span>
+                      <input type="date" value={s.releasedAt ?? ""} onChange={(e) => setServiceField(s.name, { releasedAt: e.target.value || undefined })} className={cn(miniInput, "w-36")} />
+                    </label>
+                    <label className="flex items-center gap-2">
                       <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Previsão de entrega</span>
                       <input type="date" value={s.dueDate ?? ""} onChange={(e) => setServiceField(s.name, { dueDate: e.target.value || undefined })} className={cn(miniInput, "w-36")} />
                     </label>

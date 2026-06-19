@@ -6,7 +6,8 @@ import { FolderKanban, Building2, CalendarClock } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { useCondoStore } from "@/lib/condo-store";
 import { useCatalogs } from "@/lib/catalog-store";
-import { projectFlow, serviceProgress, fmtMoney, fmtDate, relativeDays, isOverdue } from "@/lib/domain";
+import { Badge } from "@/components/ui/badge";
+import { projectFlow, serviceProgress, fmtMoney, fmtDate, relativeDays, isOverdue, activityResponsible } from "@/lib/domain";
 import { serviceColor } from "@/lib/service-color";
 import type { Condominium, ContractedService, ServiceProgress } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -123,16 +124,25 @@ export function ProjetosView() {
                           <span className="font-mono text-success">Entregue</span>
                         )}
                       </div>
-                      {acts.length > 0 && (
-                        <div className="mt-2">
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                            <div className="h-full rounded-full bg-success" style={{ width: `${(done / acts.length) * 100}%` }} />
+                      {acts.length > 0 && (() => {
+                        const next = acts.find((a) => !a.done);
+                        return (
+                          <div className="mt-2">
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-success" style={{ width: `${(done / acts.length) * 100}%` }} />
+                            </div>
+                            <span className="mt-1 block text-right font-mono text-[0.625rem] text-muted-foreground">
+                              {done}/{acts.length} etapas
+                            </span>
+                            {next && (
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[0.6875rem]">
+                                <span className="text-muted-foreground">Próxima: {next.label}</span>
+                                {next.responsible && <Badge tone={activityResponsible[next.responsible].tone}>{activityResponsible[next.responsible].label}</Badge>}
+                              </div>
+                            )}
                           </div>
-                          <span className="mt-1 block text-right font-mono text-[0.625rem] text-muted-foreground">
-                            {done}/{acts.length} atividades · {acts.length - done} pendente{acts.length - done === 1 ? "" : "s"}
-                          </span>
-                        </div>
-                      )}
+                        );
+                      })()}
                       <select
                         aria-label="Mover projeto"
                         value={service.progress ?? "liberado"}

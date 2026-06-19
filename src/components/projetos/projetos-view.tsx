@@ -25,6 +25,8 @@ const COLUMN_TONE: Record<ServiceProgress, string> = {
 export function ProjetosView() {
   const { condos, updateCondo } = useCondoStore();
   const cat = useCatalogs();
+  const [dragged, setDragged] = React.useState<{ condoId: string; serviceName: string } | null>(null);
+  const [overCol, setOverCol] = React.useState<ServiceProgress | null>(null);
 
   const projects: Project[] = condos.flatMap((c) =>
     c.services.filter((s) => s.kind === "pontual").map((service) => ({ condo: c, service })),
@@ -61,7 +63,24 @@ export function ProjetosView() {
       ) : (
         <div className="grid grid-cols-1 gap-4 px-4 py-6 md:grid-cols-3 md:px-8">
           {columns.map((col) => (
-            <div key={col.key} className={cn("rounded-xl border border-t-4 bg-muted/20", COLUMN_TONE[col.key])}>
+            <div
+              key={col.key}
+              onDragOver={(e) => { e.preventDefault(); setOverCol(col.key); }}
+              onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
+              onDrop={() => {
+                if (dragged) {
+                  const c = condos.find((x) => x.id === dragged.condoId);
+                  if (c) move(c, dragged.serviceName, col.key);
+                }
+                setDragged(null);
+                setOverCol(null);
+              }}
+              className={cn(
+                "rounded-xl border border-t-4 bg-muted/20 transition-colors",
+                COLUMN_TONE[col.key],
+                overCol === col.key && "bg-primary/5 ring-2 ring-primary/40",
+              )}
+            >
               <div className="flex items-center justify-between gap-2 px-4 py-3">
                 <span className="text-sm font-semibold">{serviceProgress[col.key].label}</span>
                 <span className="font-mono text-xs text-muted-foreground">
@@ -77,7 +96,13 @@ export function ProjetosView() {
                   const acts = service.activities ?? [];
                   const done = acts.filter((a) => a.done).length;
                   return (
-                    <div key={`${condo.id}-${service.name}`} className="rounded-lg border bg-card p-3 shadow-sm">
+                    <div
+                      key={`${condo.id}-${service.name}`}
+                      draggable
+                      onDragStart={() => setDragged({ condoId: condo.id, serviceName: service.name })}
+                      onDragEnd={() => { setDragged(null); setOverCol(null); }}
+                      className="cursor-grab rounded-lg border bg-card p-3 shadow-sm active:cursor-grabbing"
+                    >
                       <span style={serviceColor(service.name, cat.services)} className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold">
                         {service.name}
                       </span>

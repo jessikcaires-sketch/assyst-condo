@@ -65,6 +65,36 @@ export const DEFAULT_PROJECT_ACTIVITIES: string[] = [
   "Apresentação do laudo",
 ];
 
+/** Tipo predefinido de cada serviço (pode ser alterado por condomínio). */
+export const SERVICE_DEFAULT_KIND: Record<string, ServiceKind> = {
+  "Assessoria técnica condominial": "recorrente",
+  "Gestão da manutenção": "recorrente",
+  "Gestão dos planos de reforma": "recorrente",
+  "Fiscalização de fachada": "recorrente",
+  "Acompanhamento de obras": "recorrente",
+  "Fiscalização técnica e elaboração de parecer": "pontual",
+  "Inspeção predial": "pontual",
+  "Vistoria técnica": "pontual",
+  "Inspeção de fachada": "pontual",
+  "Laudo técnico": "pontual",
+  "Parecer Técnico": "pontual",
+  "Laudo Especializado": "pontual",
+  "Parecer Técnico de Vícios Construtivos": "pontual",
+};
+
+export function serviceDefaultKind(name: string): ServiceKind {
+  return SERVICE_DEFAULT_KIND[name] ?? "recorrente";
+}
+
+/** Atividades-padrão por serviço (só Inspeção Predial vem com checklist). */
+const SERVICE_DEFAULT_ACTIVITIES: Record<string, string[]> = {
+  "Inspeção predial": DEFAULT_PROJECT_ACTIVITIES,
+};
+
+export function serviceDefaultActivities(name: string): string[] {
+  return SERVICE_DEFAULT_ACTIVITIES[name] ?? [];
+}
+
 export const condoStatus: Record<CondoStatus, Label> = {
   ativo: { label: "Ativo", tone: "success" },
   inativo: { label: "Inativo", tone: "muted" },
@@ -155,6 +185,9 @@ export const SERVICE_CATALOG: string[] = [
   "Inspeção de fachada",
   "Laudo técnico",
   "Acompanhamento de obras",
+  "Parecer Técnico",
+  "Laudo Especializado",
+  "Parecer Técnico de Vícios Construtivos",
 ];
 
 export const visitStatus: Record<VisitStatus, Label> = {

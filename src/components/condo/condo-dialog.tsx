@@ -3,7 +3,7 @@
 import * as React from "react";
 import { X, Building2, CheckCircle2, Plus, Trash2, ImagePlus, Search, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { condoStatus, contactRole, coverage, serviceKind, serviceProgress, DEFAULT_PROJECT_ACTIVITIES } from "@/lib/domain";
+import { condoStatus, contactRole, coverage, serviceKind, serviceProgress, serviceDefaultKind, serviceDefaultActivities } from "@/lib/domain";
 import { useCatalogs } from "@/lib/catalog-store";
 import type {
   Condominium,
@@ -99,9 +99,14 @@ export function CondoDialog({
       const res = await fetch(`/api/cnpj/${digits}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "falha");
-      setForm((f) => ({ ...f, address: data.address || f.address }));
+      setForm((f) => ({
+        ...f,
+        address: data.address || f.address,
+        // Preenche o nome se ainda estiver vazio (não sobrescreve o que você digitou).
+        name: f.name.trim() ? f.name : (data.nomeFantasia || data.razaoSocial || f.name),
+      }));
       setCnpjState("ok");
-      setCnpjMsg(data.razaoSocial ? `✓ ${data.razaoSocial}` : "✓ Endereço preenchido.");
+      setCnpjMsg(data.razaoSocial ? `✓ ${data.razaoSocial}` : "✓ Dados preenchidos.");
     } catch {
       setCnpjState("error");
       setCnpjMsg("Não encontrei. Confira o CNPJ e tente de novo.");
@@ -120,12 +125,19 @@ export function CondoDialog({
 
   const hasService = (name: string) => services.some((s) => s.name === name);
 
-  const newService = (name: string): ContractedService => ({
-    name,
-    coverage: "contrato",
-    kind: "recorrente",
-    progress: "em_andamento",
-  });
+  const newService = (name: string): ContractedService => {
+    const kind = serviceDefaultKind(name);
+    const svc: ContractedService = { name, coverage: "contrato", kind };
+    if (kind === "pontual") {
+      svc.progress = "liberado";
+      svc.activities = serviceDefaultActivities(name).map((label, i) => ({
+        id: `act-${Date.now()}-${i}-${Math.floor(Math.random() * 1e4)}`,
+        label,
+        done: false,
+      }));
+    }
+    return svc;
+  };
 
   function toggleService(name: string) {
     setServices((prev) =>
@@ -156,7 +168,7 @@ export function CondoDialog({
         const next: ContractedService = { ...s, kind };
         // Ao virar pontual, já traz as atividades-padrão e status inicial.
         if (kind === "pontual" && (!s.activities || s.activities.length === 0)) {
-          next.activities = DEFAULT_PROJECT_ACTIVITIES.map((label, i) => ({
+          next.activities = serviceDefaultActivities(name).map((label, i) => ({
             id: `act-${Date.now()}-${i}`,
             label,
             done: false,

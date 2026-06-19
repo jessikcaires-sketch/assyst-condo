@@ -1,26 +1,260 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   ASSYST CONSOLE — engineering operations design system
+   Brand: PANTONE 165 C orange (#f26729) · PANTONE 433 C slate (#1D242B)
+   Orange = action / brand · Slate = ink + command rail · cool light canvas
+   ============================================================ */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand + semantic */
+  --color-copper: var(--copper);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 3px);
+  --radius-md: calc(var(--radius) - 1px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.7rem;
+
+  /* Canvas — clean, cool light */
+  --background: oklch(0.975 0.003 245);
+  --foreground: oklch(0.255 0.014 248);
+
+  /* Raised surfaces — crisp white */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.255 0.014 248);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.255 0.014 248);
+
+  /* Signature — brand orange #f26729 */
+  --primary: oklch(0.685 0.176 47);
+  --primary-foreground: oklch(0.995 0.012 80);
+
+  --secondary: oklch(0.952 0.004 245);
+  --secondary-foreground: oklch(0.3 0.014 248);
+
+  --muted: oklch(0.957 0.004 245);
+  --muted-foreground: oklch(0.505 0.012 248);
+
+  --accent: oklch(0.945 0.006 245);
+  --accent-foreground: oklch(0.3 0.014 248);
+
+  --destructive: oklch(0.585 0.2 25);
+
+  --border: oklch(0.912 0.005 245);
+  --border-strong: oklch(0.852 0.008 248);
+  --input: oklch(0.912 0.005 245);
+  --ring: oklch(0.685 0.176 47);
+
+  /* Burnt secondary warm accent */
+  --copper: oklch(0.6 0.13 38);
+
+  /* Semantic status — distinct from brand orange */
+  --success: oklch(0.6 0.13 156);
+  --success-foreground: oklch(0.99 0.005 150);
+  --success-soft: oklch(0.945 0.04 156);
+  --warning: oklch(0.76 0.13 82);
+  --warning-foreground: oklch(0.28 0.05 82);
+  --warning-soft: oklch(0.955 0.06 88);
+  --danger: oklch(0.585 0.2 25);
+  --danger-foreground: oklch(0.99 0.01 25);
+  --danger-soft: oklch(0.945 0.05 25);
+  --info: oklch(0.55 0.105 245);
+  --info-soft: oklch(0.94 0.038 245);
+
+  /* Charts — brand palette */
+  --chart-1: oklch(0.685 0.176 47);
+  --chart-2: oklch(0.55 0.105 245);
+  --chart-3: oklch(0.6 0.13 156);
+  --chart-4: oklch(0.76 0.13 82);
+  --chart-5: oklch(0.42 0.02 248);
+
+  /* Command rail — slate #1D242B */
+  --sidebar: oklch(0.235 0.014 248);
+  --sidebar-foreground: oklch(0.93 0.005 245);
+  --sidebar-muted: oklch(0.605 0.012 245);
+  --sidebar-primary: oklch(0.7 0.176 47);
+  --sidebar-primary-foreground: oklch(0.99 0.012 80);
+  --sidebar-accent: oklch(0.305 0.014 248);
+  --sidebar-accent-foreground: oklch(0.97 0.004 245);
+  --sidebar-border: oklch(0.32 0.012 248);
+  --sidebar-ring: oklch(0.7 0.176 47);
+}
+
+.dark {
+  --background: oklch(0.205 0.013 248);
+  --foreground: oklch(0.93 0.005 245);
+  --card: oklch(0.245 0.014 248);
+  --card-foreground: oklch(0.93 0.005 245);
+  --popover: oklch(0.245 0.014 248);
+  --popover-foreground: oklch(0.93 0.005 245);
+  --primary: oklch(0.7 0.176 47);
+  --primary-foreground: oklch(0.18 0.014 248);
+  --secondary: oklch(0.29 0.014 248);
+  --secondary-foreground: oklch(0.93 0.005 245);
+  --muted: oklch(0.29 0.014 248);
+  --muted-foreground: oklch(0.68 0.012 245);
+  --accent: oklch(0.32 0.014 248);
+  --accent-foreground: oklch(0.95 0.004 245);
+  --destructive: oklch(0.62 0.19 25);
+  --border: oklch(0.34 0.012 248);
+  --border-strong: oklch(0.42 0.013 248);
+  --input: oklch(0.34 0.012 248);
+  --ring: oklch(0.7 0.176 47);
+  --copper: oklch(0.66 0.13 40);
+  --success: oklch(0.66 0.12 156);
+  --success-soft: oklch(0.33 0.05 156);
+  --warning: oklch(0.78 0.12 84);
+  --warning-foreground: oklch(0.95 0.03 84);
+  --warning-soft: oklch(0.35 0.06 84);
+  --danger: oklch(0.64 0.19 25);
+  --danger-soft: oklch(0.35 0.07 25);
+  --info: oklch(0.65 0.1 245);
+  --info-soft: oklch(0.32 0.05 245);
+  --sidebar: oklch(0.185 0.013 248);
+  --sidebar-foreground: oklch(0.93 0.005 245);
+  --sidebar-muted: oklch(0.6 0.012 245);
+  --sidebar-primary: oklch(0.7 0.176 47);
+  --sidebar-primary-foreground: oklch(0.16 0.014 248);
+  --sidebar-accent: oklch(0.27 0.014 248);
+  --sidebar-accent-foreground: oklch(0.95 0.004 245);
+  --sidebar-border: oklch(0.3 0.012 248);
+  --sidebar-ring: oklch(0.7 0.176 47);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv05" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1, h2, h3, h4, h5 {
+    @apply font-display;
+    letter-spacing: -0.02em;
+  }
+  /* Tabular, slashed-zero figures for all data readouts */
+  .nums,
+  th,
+  td.num,
+  .font-mono {
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 24%, transparent);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Micro eyebrow label — the connective tissue of the console */
+  .eyebrow {
+    @apply font-mono text-[0.6875rem] uppercase tracking-[0.16em] text-muted-foreground;
+  }
+
+  /* Subtle dot-grid atmosphere for the canvas */
+  .bg-canvas {
+    background-image: radial-gradient(
+      color-mix(in oklch, var(--foreground) 6%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+
+  /* Modern soft-elevation panel */
+  .panel {
+    @apply rounded-lg border bg-card;
+    box-shadow:
+      0 1px 2px -1px color-mix(in oklch, var(--foreground) 10%, transparent),
+      0 2px 8px -4px color-mix(in oklch, var(--foreground) 8%, transparent);
+  }
+}
+
+/* Entrance choreography */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-rise {
+  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise { animation: none; }
+}
+
+/* Padrão de escrita: CAIXA ALTA em todo o conteúdo (apenas exibição).
+   Campos de formulário preservam o que o usuário digita. */
+.app-content {
+  text-transform: uppercase;
+}
+.app-content :where(input, textarea, select, [contenteditable="true"]) {
+  text-transform: none;
 }

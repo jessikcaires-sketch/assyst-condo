@@ -57,6 +57,7 @@ export function CondoDialog({
   const [services, setServices] = React.useState<ContractedService[]>([]);
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [customService, setCustomService] = React.useState("");
+  const [picker, setPicker] = React.useState("");
   const [photoUrl, setPhotoUrl] = React.useState<string | undefined>(undefined);
   const [cnpjState, setCnpjState] = React.useState<"idle" | "loading" | "ok" | "error">("idle");
   const [cnpjMsg, setCnpjMsg] = React.useState("");
@@ -330,32 +331,34 @@ export function CondoDialog({
         </div>
 
         {/* Serviços */}
-        <Section title="Escopo de serviços" hint="Marque os serviços prestados neste condomínio" />
-        <div className="flex flex-wrap gap-1.5">
-          {cat.services.map((name, i) => {
-            const active = hasService(name);
-            return (
-              <button
-                key={name}
-                type="button"
-                onClick={() => toggleService(name)}
-                style={active ? serviceColorAt(i) : undefined}
-                className={cn(
-                  "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                  active ? "" : "bg-card text-muted-foreground hover:bg-muted",
-                )}
-              >
-                {name}
-              </button>
-            );
-          })}
+        <Section title="Escopo de serviços" hint="Selecione um serviço e adicione à lista" />
+        <div className="flex gap-2">
+          <select
+            aria-label="Selecionar serviço"
+            value={picker}
+            onChange={(e) => setPicker(e.target.value)}
+            className={cn(inputCls, "flex-1")}
+          >
+            <option value="">Selecione um serviço…</option>
+            {cat.services.filter((s) => !hasService(s)).map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => { if (picker) { toggleService(picker); setPicker(""); } }}
+            disabled={!picker}
+            className="inline-flex h-9 items-center gap-1 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            <Plus className="size-4" /> Adicionar
+          </button>
         </div>
         <div className="mt-2 flex gap-2">
           <input
             value={customService}
             onChange={(e) => setCustomService(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomService(); } }}
-            placeholder="Outro serviço…"
+            placeholder="Ou digite outro serviço…"
             className={cn(inputCls, "flex-1")}
           />
           <button type="button" onClick={addCustomService} className="inline-flex h-9 items-center gap-1 rounded-md border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted">
@@ -389,18 +392,29 @@ export function CondoDialog({
 
                 {s.kind === "pontual" && (
                   <div className="mt-2.5 space-y-2 border-t pt-2.5">
-                    <label className="flex items-center gap-2">
-                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Valor da proposta (R$)</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={s.value ?? ""}
-                        onChange={(e) => setServiceField(s.name, { value: e.target.value === "" ? undefined : Number(e.target.value) })}
-                        placeholder="0,00"
-                        className={cn(miniInput, "w-32")}
-                      />
-                    </label>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <label className="flex items-center gap-2">
+                        <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Valor (R$)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={s.value ?? ""}
+                          onChange={(e) => setServiceField(s.name, { value: e.target.value === "" ? undefined : Number(e.target.value) })}
+                          placeholder="0,00"
+                          className={cn(miniInput, "w-28")}
+                        />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Previsão de entrega</span>
+                        <input
+                          type="date"
+                          value={s.dueDate ?? ""}
+                          onChange={(e) => setServiceField(s.name, { dueDate: e.target.value || undefined })}
+                          className={cn(miniInput, "w-36")}
+                        />
+                      </label>
+                    </div>
                     <div>
                       <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Atividades</span>
                       <div className="mt-1 space-y-1">

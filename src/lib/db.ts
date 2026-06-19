@@ -72,6 +72,7 @@ async function init(): Promise<void> {
     );
   `);
 
+
   // Seeds — só quando a tabela estiver vazia (preserva edições do usuário).
   const { rows: condoCount } = await pool.query<{ n: string }>(`SELECT count(*)::text AS n FROM condos`);
   if (condoCount[0].n === "0") {

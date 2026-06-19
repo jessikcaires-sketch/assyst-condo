@@ -12,6 +12,7 @@ import {
   Gavel,
   FolderOpen,
   FolderKanban,
+  Repeat,
   FileBarChart,
   CalendarRange,
   SlidersHorizontal,
@@ -46,7 +47,8 @@ const nav: NavGroup[] = [
     label: "Operação",
     items: [
       { href: "/condominios", label: "Condomínios", icon: Building2 },
-      { href: "/projetos", label: "Projetos", icon: FolderKanban },
+      { href: "/servicos-recorrentes", label: "Serviços Recorrentes", icon: Repeat },
+      { href: "/projetos", label: "Serviços Pontuais", icon: FolderKanban },
       { href: "/plano-de-acao", label: "Plano de ação", icon: ListChecks },
       { href: "/agenda", label: "Agenda de visitas", icon: CalendarRange },
       { href: "/reunioes", label: "Reuniões", icon: CalendarDays },

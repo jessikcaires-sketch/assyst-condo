@@ -124,12 +124,14 @@ export interface ServiceActivity {
 export interface ContractedService {
   name: string;
   coverage: Coverage;
-  kind?: ServiceKind; // padrão: recorrente
-  progress?: ServiceProgress; // padrão: em_andamento
-  /** Checklist de etapas — usado em projetos pontuais. */
+  kind?: ServiceKind; // recorrente (padrão) | pontual
+  progress?: ServiceProgress; // andamento do serviço pontual
+  /** Checklist de etapas — serviço pontual. */
   activities?: ServiceActivity[];
-  /** Valor da proposta (R$) — projetos pontuais. */
+  /** Valor da proposta (R$) — serviço pontual. */
   value?: number;
+  /** Previsão de entrega (data) — serviço pontual. */
+  dueDate?: ISODate;
 }
 
 /** A person tied to the condo (síndico, zelador, gerente predial, etc.). */

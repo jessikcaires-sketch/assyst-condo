@@ -101,6 +101,8 @@ export function CondosView() {
           const stats = getCondoStats(c.id);
           const cs = condoStatus[c.status];
           const contract = contractSignal(c.contractEnd);
+          const hasRec = c.services.some((s) => (s.kind ?? "recorrente") === "recorrente");
+          const hasPon = c.services.some((s) => s.kind === "pontual");
           return (
             <Link key={c.id} href={`/condominios/${c.id}`} className="group">
               <Panel className="flex h-full flex-col overflow-hidden p-0 transition-shadow hover:shadow-md">
@@ -123,9 +125,13 @@ export function CondosView() {
                   </div>
                 </div>
                 <div className="flex flex-1 flex-col gap-3 p-5">
-                  <h3 className="font-display text-lg font-bold leading-snug tracking-tight group-hover:text-primary">
-                    {c.name}
-                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-display text-lg font-bold leading-snug tracking-tight group-hover:text-primary">
+                      {c.name}
+                    </h3>
+                    {hasRec && <Badge tone="info">Recorrente</Badge>}
+                    {hasPon && <Badge tone="copper">Pontual</Badge>}
+                  </div>
                   <p className="flex items-start gap-1.5 text-xs uppercase leading-relaxed tracking-wide text-muted-foreground">
                     <MapPin className="mt-0.5 size-3.5 shrink-0" />
                     <span>{c.address || "Endereço não informado"}</span>

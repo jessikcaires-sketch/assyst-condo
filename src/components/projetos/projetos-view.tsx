@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { FolderKanban, Building2 } from "lucide-react";
+import { FolderKanban, Building2, CalendarClock } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { useCondoStore } from "@/lib/condo-store";
 import { useCatalogs } from "@/lib/catalog-store";
-import { projectFlow, serviceProgress, fmtMoney } from "@/lib/domain";
+import { projectFlow, serviceProgress, fmtMoney, fmtDate, relativeDays, isOverdue } from "@/lib/domain";
 import { serviceColor } from "@/lib/service-color";
 import type { Condominium, ContractedService, ServiceProgress } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -46,8 +46,8 @@ export function ProjetosView() {
     <div className="animate-rise">
       <PageHeader
         eyebrow="Operação"
-        title="Projetos"
-        description="Projetos pontuais (inspeções, vistorias, laudos) de todos os condomínios, organizados por andamento."
+        title="Serviços Pontuais"
+        description="Serviços pontuais (inspeções, vistorias, laudos) de todos os condomínios — etapa, previsão de entrega e atividades."
       />
 
       {projects.length === 0 ? (
@@ -85,15 +85,27 @@ export function ProjetosView() {
                         <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
                         <span className="min-w-0 truncate">{condo.name}</span>
                       </Link>
-                      {typeof service.value === "number" && (
-                        <p className="mt-1 font-mono text-xs text-muted-foreground">{fmtMoney(service.value)}</p>
-                      )}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                        {typeof service.value === "number" && (
+                          <span className="font-mono text-muted-foreground">{fmtMoney(service.value)}</span>
+                        )}
+                        {service.dueDate && service.progress !== "entregue" && (
+                          <span className={cn("inline-flex items-center gap-1 font-mono", isOverdue(service.dueDate, "nao_iniciado") ? "text-danger" : "text-muted-foreground")}>
+                            <CalendarClock className="size-3" /> {fmtDate(service.dueDate)} ({relativeDays(service.dueDate)})
+                          </span>
+                        )}
+                        {service.dueDate && service.progress === "entregue" && (
+                          <span className="font-mono text-success">Entregue</span>
+                        )}
+                      </div>
                       {acts.length > 0 && (
                         <div className="mt-2">
                           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                             <div className="h-full rounded-full bg-success" style={{ width: `${(done / acts.length) * 100}%` }} />
                           </div>
-                          <span className="mt-1 block text-right font-mono text-[0.625rem] text-muted-foreground">{done}/{acts.length} atividades</span>
+                          <span className="mt-1 block text-right font-mono text-[0.625rem] text-muted-foreground">
+                            {done}/{acts.length} atividades · {acts.length - done} pendente{acts.length - done === 1 ? "" : "s"}
+                          </span>
                         </div>
                       )}
                       <select

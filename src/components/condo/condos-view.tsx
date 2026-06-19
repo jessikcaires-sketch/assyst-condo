@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Plus, LayoutGrid, List as ListIcon, Building2, MapPin, AlertTriangle } from "lucide-react";
+import { Plus, LayoutGrid, List as ListIcon, Building2, MapPin } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { CondoTable, type CondoRow } from "@/components/condo-table";
 import { CondoDialog } from "@/components/condo/condo-dialog";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCondoStore } from "@/lib/condo-store";
 import { useCatalogs } from "@/lib/catalog-store";
 import { getCondoStats } from "@/lib/mock-data";
-import { condoStatus, generalStatus, contractSignal } from "@/lib/domain";
+import { condoStatus, contractSignal } from "@/lib/domain";
 import { serviceColor } from "@/lib/service-color";
 import { cn } from "@/lib/utils";
 
@@ -86,10 +86,8 @@ export function CondosView() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {condos.map((c) => {
           const stats = getCondoStats(c.id);
-          const gs = generalStatus[stats.general];
           const cs = condoStatus[c.status];
           const contract = contractSignal(c.contractEnd);
-          const contractAlert = contract.state === "a_vencer" || contract.state === "vencido";
           return (
             <Link key={c.id} href={`/condominios/${c.id}`} className="group">
               <Panel className="flex h-full flex-col overflow-hidden p-0 transition-shadow hover:shadow-md">
@@ -103,7 +101,9 @@ export function CondosView() {
                     </div>
                   )}
                   <div className="absolute left-2.5 top-2.5">
-                    <Badge tone={gs.tone} dot>{gs.label}</Badge>
+                    <Badge tone={contract.tone} dot>
+                      {contract.state === "sem_data" ? "Sem contrato" : contract.label}
+                    </Badge>
                   </div>
                   <div className="absolute right-2.5 top-2.5">
                     <Badge tone={cs.tone}>{cs.label}</Badge>
@@ -130,18 +130,6 @@ export function CondosView() {
                         </span>
                       ))}
                     </div>
-                  )}
-                  {contractAlert && (
-                    <span
-                      className={cn(
-                        "inline-flex w-fit items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium",
-                        contract.state === "vencido"
-                          ? "border-danger/30 bg-danger-soft text-danger"
-                          : "border-warning/40 bg-warning-soft text-warning-foreground",
-                      )}
-                    >
-                      <AlertTriangle className="size-3.5" /> Contrato {contract.label.toLowerCase()}
-                    </span>
                   )}
                   <div className="mt-auto flex items-center justify-between border-t pt-3 text-xs">
                     <span className="flex items-center gap-1.5 text-muted-foreground">

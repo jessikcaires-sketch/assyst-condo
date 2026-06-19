@@ -41,7 +41,6 @@ import {
   getBids,
 } from "@/lib/mock-data";
 import {
-  generalStatus,
   condoStatus,
   contactRole,
   contractSignal,
@@ -75,7 +74,6 @@ export function CondoDetail() {
 
   const stats = getCondoStats(condo.id);
   const responsible = cat.getResponsible(condo.responsibleId);
-  const gs = generalStatus[stats.general];
   const cs = condoStatus[condo.status];
   const contract = contractSignal(condo.contractEnd);
 
@@ -120,8 +118,8 @@ export function CondoDetail() {
               <h1 className="font-display text-2xl font-bold tracking-tight md:text-[1.75rem]">
                 {condo.name}
               </h1>
-              <Badge tone={gs.tone} dot>
-                {gs.label}
+              <Badge tone={contract.tone} dot>
+                {contract.state === "sem_data" ? "Sem contrato" : contract.label}
               </Badge>
               <Badge tone={cs.tone}>{cs.label}</Badge>
             </div>

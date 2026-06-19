@@ -200,8 +200,9 @@ export function CondoDialog({
             <div className="flex gap-2">
               <input
                 value={form.cnpj}
-                onChange={set("cnpj")}
+                onChange={(e) => setForm((f) => ({ ...f, cnpj: maskCnpj(e.target.value) }))}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); buscarCnpj(); } }}
+                inputMode="numeric"
                 className={cn(inputCls, "flex-1")}
                 placeholder="00.000.000/0000-00"
               />
@@ -424,6 +425,16 @@ export function CondoDialog({
 
 const inputCls =
   "h-9 w-full rounded-md border bg-card px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-ring focus:ring-2 focus:ring-ring/20";
+
+/** Aplica a máscara 00.000.000/0000-00 conforme digita. */
+function maskCnpj(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 14);
+  if (d.length > 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  if (d.length > 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  if (d.length > 5) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length > 2) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  return d;
+}
 
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (

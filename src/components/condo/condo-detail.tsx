@@ -187,7 +187,11 @@ export function CondoDetail() {
           </div>
         )}
 
-        <ServiceScope services={condo.services} catalogServices={cat.services} />
+        <ServiceScope
+          services={condo.services}
+          catalogServices={cat.services}
+          onChange={(services) => updateCondo(condo.id, { services })}
+        />
 
         {/* Resumo executivo */}
         <section>

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { X, Building2, CheckCircle2, Plus, Trash2, ImagePlus, Search, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { condoStatus, contactRole, coverage } from "@/lib/domain";
+import { condoStatus, contactRole, coverage, serviceKind, serviceProgress, DEFAULT_PROJECT_ACTIVITIES } from "@/lib/domain";
 import { useCatalogs } from "@/lib/catalog-store";
 import type {
   Condominium,
@@ -12,6 +12,9 @@ import type {
   ContractedService,
   CondoStatus,
   Coverage,
+  ServiceKind,
+  ServiceProgress,
+  ServiceActivity,
 } from "@/lib/types";
 import type { CondoInput } from "@/lib/condo-store";
 import { compressImage } from "@/lib/image";
@@ -116,11 +119,18 @@ export function CondoDialog({
 
   const hasService = (name: string) => services.some((s) => s.name === name);
 
+  const newService = (name: string): ContractedService => ({
+    name,
+    coverage: "contrato",
+    kind: "recorrente",
+    progress: "em_andamento",
+  });
+
   function toggleService(name: string) {
     setServices((prev) =>
       prev.some((s) => s.name === name)
         ? prev.filter((s) => s.name !== name)
-        : [...prev, { name, coverage: "contrato" }],
+        : [...prev, newService(name)],
     );
   }
 
@@ -130,13 +140,44 @@ export function CondoDialog({
       setCustomService("");
       return;
     }
-    setServices((prev) => [...prev, { name, coverage: "contrato" }]);
+    setServices((prev) => [...prev, newService(name)]);
     setCustomService("");
   }
 
-  function setServiceCoverage(name: string, cov: Coverage) {
-    setServices((prev) => prev.map((s) => (s.name === name ? { ...s, coverage: cov } : s)));
+  function setServiceField(name: string, patch: Partial<ContractedService>) {
+    setServices((prev) => prev.map((s) => (s.name === name ? { ...s, ...patch } : s)));
   }
+
+  function setServiceKind(name: string, kind: ServiceKind) {
+    setServices((prev) =>
+      prev.map((s) => {
+        if (s.name !== name) return s;
+        const next: ContractedService = { ...s, kind };
+        // Ao virar pontual, já traz as atividades-padrão e status inicial.
+        if (kind === "pontual" && (!s.activities || s.activities.length === 0)) {
+          next.activities = DEFAULT_PROJECT_ACTIVITIES.map((label, i) => ({
+            id: `act-${Date.now()}-${i}`,
+            label,
+            done: false,
+          }));
+          next.progress = s.progress ?? "liberado";
+        }
+        return next;
+      }),
+    );
+  }
+
+  function updateActivities(name: string, fn: (acts: ServiceActivity[]) => ServiceActivity[]) {
+    setServices((prev) => prev.map((s) => (s.name === name ? { ...s, activities: fn(s.activities ?? []) } : s)));
+  }
+  const addActivity = (name: string) =>
+    updateActivities(name, (acts) => [...acts, { id: `act-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, label: "", done: false }]);
+  const toggleActivity = (name: string, id: string) =>
+    updateActivities(name, (acts) => acts.map((a) => (a.id === id ? { ...a, done: !a.done } : a)));
+  const renameActivity = (name: string, id: string, label: string) =>
+    updateActivities(name, (acts) => acts.map((a) => (a.id === id ? { ...a, label } : a)));
+  const removeActivity = (name: string, id: string) =>
+    updateActivities(name, (acts) => acts.filter((a) => a.id !== id));
 
   function updateContact(id: string, patch: Partial<Contact>) {
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -322,31 +363,63 @@ export function CondoDialog({
           </button>
         </div>
         {services.length > 0 && (
-          <ul className="mt-3 space-y-1.5">
+          <ul className="mt-3 space-y-2">
             {services.map((s) => (
-              <li key={s.name} className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: serviceDot(s.name, cat.services) }} />
-                  <span className="truncate">{s.name}</span>
-                </span>
-                <div className="flex shrink-0 items-center gap-1">
-                  {(Object.keys(coverage) as Coverage[]).map((cov) => (
-                    <button
-                      key={cov}
-                      type="button"
-                      onClick={() => setServiceCoverage(s.name, cov)}
-                      className={cn(
-                        "rounded px-2 py-0.5 text-[0.6875rem] font-medium transition-colors",
-                        s.coverage === cov ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      {coverage[cov].label}
-                    </button>
-                  ))}
-                  <button type="button" onClick={() => toggleService(s.name)} className="ml-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label={`Remover ${s.name}`}>
+              <li key={s.name} className="rounded-md border bg-muted/30 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: serviceDot(s.name, cat.services) }} />
+                    <span className="truncate">{s.name}</span>
+                  </span>
+                  <button type="button" onClick={() => toggleService(s.name)} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label={`Remover ${s.name}`}>
                     <Trash2 className="size-3.5" />
                   </button>
                 </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <select aria-label="Tipo" value={s.kind ?? "recorrente"} onChange={(e) => setServiceKind(s.name, e.target.value as ServiceKind)} className={miniSelect}>
+                    {(Object.keys(serviceKind) as ServiceKind[]).map((k) => <option key={k} value={k}>{serviceKind[k].label}</option>)}
+                  </select>
+                  <select aria-label="Status" value={s.progress ?? "em_andamento"} onChange={(e) => setServiceField(s.name, { progress: e.target.value as ServiceProgress })} className={miniSelect}>
+                    {(Object.keys(serviceProgress) as ServiceProgress[]).map((p) => <option key={p} value={p}>{serviceProgress[p].label}</option>)}
+                  </select>
+                  <select aria-label="Cobertura" value={s.coverage} onChange={(e) => setServiceField(s.name, { coverage: e.target.value as Coverage })} className={miniSelect}>
+                    {(Object.keys(coverage) as Coverage[]).map((c) => <option key={c} value={c}>{coverage[c].label}</option>)}
+                  </select>
+                </div>
+
+                {s.kind === "pontual" && (
+                  <div className="mt-2.5 space-y-2 border-t pt-2.5">
+                    <label className="flex items-center gap-2">
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Valor da proposta (R$)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={s.value ?? ""}
+                        onChange={(e) => setServiceField(s.name, { value: e.target.value === "" ? undefined : Number(e.target.value) })}
+                        placeholder="0,00"
+                        className={cn(miniInput, "w-32")}
+                      />
+                    </label>
+                    <div>
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Atividades</span>
+                      <div className="mt-1 space-y-1">
+                        {(s.activities ?? []).map((a) => (
+                          <div key={a.id} className="flex items-center gap-2">
+                            <input type="checkbox" checked={a.done} onChange={() => toggleActivity(s.name, a.id)} className="size-3.5 shrink-0 accent-primary" aria-label={`Concluir ${a.label}`} />
+                            <input value={a.label} onChange={(e) => renameActivity(s.name, a.id, e.target.value)} placeholder="Atividade…" className={cn(miniInput, "flex-1", a.done && "line-through opacity-60")} />
+                            <button type="button" onClick={() => removeActivity(s.name, a.id)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label="Remover atividade">
+                              <Trash2 className="size-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => addActivity(s.name)} className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-primary hover:underline">
+                          <Plus className="size-3" /> Adicionar atividade
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -425,6 +498,11 @@ export function CondoDialog({
 
 const inputCls =
   "h-9 w-full rounded-md border bg-card px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-ring focus:ring-2 focus:ring-ring/20";
+
+const miniSelect =
+  "h-7 rounded-md border bg-card px-2 text-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20";
+const miniInput =
+  "h-7 rounded-md border bg-card px-2 text-xs outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-ring focus:ring-2 focus:ring-ring/20";
 
 /** Aplica a máscara 00.000.000/0000-00 conforme digita. */
 function maskCnpj(v: string): string {

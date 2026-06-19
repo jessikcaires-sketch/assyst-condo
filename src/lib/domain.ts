@@ -5,6 +5,8 @@ import type {
   CondoStatus,
   ContactRole,
   Coverage,
+  ServiceKind,
+  ServiceProgress,
   DocCategory,
   GeneralStatus,
   InviteStatus,
@@ -37,6 +39,31 @@ export const coverage: Record<Coverage, Label> = {
   contrato: { label: "Contrato", tone: "info" },
   cortesia: { label: "Cortesia", tone: "copper" },
 };
+
+export const serviceKind: Record<ServiceKind, { label: string }> = {
+  recorrente: { label: "Recorrente" },
+  pontual: { label: "Pontual" },
+};
+
+export const serviceProgress: Record<ServiceProgress, Label> = {
+  liberado: { label: "Liberado", tone: "neutral" },
+  em_andamento: { label: "Em andamento", tone: "info" },
+  entregue: { label: "Entregue", tone: "success" },
+};
+
+/** Ordem das colunas no quadro de projetos. */
+export const projectFlow: ServiceProgress[] = ["liberado", "em_andamento", "entregue"];
+
+/** Atividades-padrão de um projeto de Inspeção Predial. */
+export const DEFAULT_PROJECT_ACTIVITIES: string[] = [
+  "Agendamento",
+  "Vistoria",
+  "Separação do material",
+  "Montagem do laudo",
+  "Revisão do laudo",
+  "Emissão da ART",
+  "Apresentação do laudo",
+];
 
 export const condoStatus: Record<CondoStatus, Label> = {
   ativo: { label: "Ativo", tone: "success" },

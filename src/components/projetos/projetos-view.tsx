@@ -1,0 +1,117 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { FolderKanban, Building2 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { useCondoStore } from "@/lib/condo-store";
+import { useCatalogs } from "@/lib/catalog-store";
+import { projectFlow, serviceProgress, fmtMoney } from "@/lib/domain";
+import { serviceColor } from "@/lib/service-color";
+import type { Condominium, ContractedService, ServiceProgress } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+interface Project {
+  condo: Condominium;
+  service: ContractedService;
+}
+
+const COLUMN_TONE: Record<ServiceProgress, string> = {
+  liberado: "border-t-muted-foreground/40",
+  em_andamento: "border-t-info",
+  entregue: "border-t-success",
+};
+
+export function ProjetosView() {
+  const { condos, updateCondo } = useCondoStore();
+  const cat = useCatalogs();
+
+  const projects: Project[] = condos.flatMap((c) =>
+    c.services.filter((s) => s.kind === "pontual").map((service) => ({ condo: c, service })),
+  );
+
+  const columns = projectFlow.map((key) => {
+    const items = projects.filter((p) => (p.service.progress ?? "liberado") === key);
+    const total = items.reduce((sum, p) => sum + (p.service.value ?? 0), 0);
+    return { key, items, total };
+  });
+
+  function move(condo: Condominium, serviceName: string, progress: ServiceProgress) {
+    updateCondo(condo.id, {
+      services: condo.services.map((s) => (s.name === serviceName ? { ...s, progress } : s)),
+    });
+  }
+
+  return (
+    <div className="animate-rise">
+      <PageHeader
+        eyebrow="Operação"
+        title="Projetos"
+        description="Projetos pontuais (inspeções, vistorias, laudos) de todos os condomínios, organizados por andamento."
+      />
+
+      {projects.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 px-4 py-20 text-center md:px-8">
+          <FolderKanban className="size-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Nenhum projeto pontual ainda. Abra um condomínio, edite e marque um serviço como
+            <strong> Pontual</strong> (ex.: Inspeção predial) — ele aparece aqui.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 px-4 py-6 md:grid-cols-3 md:px-8">
+          {columns.map((col) => (
+            <div key={col.key} className={cn("rounded-xl border border-t-4 bg-muted/20", COLUMN_TONE[col.key])}>
+              <div className="flex items-center justify-between gap-2 px-4 py-3">
+                <span className="text-sm font-semibold">{serviceProgress[col.key].label}</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {col.items.length}
+                  {col.total > 0 && <span className="ml-1.5">· {fmtMoney(col.total)}</span>}
+                </span>
+              </div>
+              <div className="space-y-2.5 px-3 pb-3">
+                {col.items.length === 0 && (
+                  <p className="px-1 py-4 text-center text-xs text-muted-foreground">Vazio</p>
+                )}
+                {col.items.map(({ condo, service }) => {
+                  const acts = service.activities ?? [];
+                  const done = acts.filter((a) => a.done).length;
+                  return (
+                    <div key={`${condo.id}-${service.name}`} className="rounded-lg border bg-card p-3 shadow-sm">
+                      <span style={serviceColor(service.name, cat.services)} className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold">
+                        {service.name}
+                      </span>
+                      <Link href={`/condominios/${condo.id}`} className="mt-2 flex items-center gap-1.5 text-sm font-medium leading-tight hover:text-primary">
+                        <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 truncate">{condo.name}</span>
+                      </Link>
+                      {typeof service.value === "number" && (
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">{fmtMoney(service.value)}</p>
+                      )}
+                      {acts.length > 0 && (
+                        <div className="mt-2">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-success" style={{ width: `${(done / acts.length) * 100}%` }} />
+                          </div>
+                          <span className="mt-1 block text-right font-mono text-[0.625rem] text-muted-foreground">{done}/{acts.length} atividades</span>
+                        </div>
+                      )}
+                      <select
+                        aria-label="Mover projeto"
+                        value={service.progress ?? "liberado"}
+                        onChange={(e) => move(condo, service.name, e.target.value as ServiceProgress)}
+                        className="mt-2.5 h-7 w-full rounded-md border bg-card px-2 text-xs outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                      >
+                        {projectFlow.map((p) => <option key={p} value={p}>Mover p/ {serviceProgress[p].label}</option>)}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

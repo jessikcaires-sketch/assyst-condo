@@ -107,10 +107,29 @@ export interface User {
   initials: string;
 }
 
+/** Recorrente (segue em andamento) ou pontual (tem entrega — ex.: inspeção predial). */
+export type ServiceKind = "recorrente" | "pontual";
+
+/** Andamento de um serviço/projeto. */
+export type ServiceProgress = "liberado" | "em_andamento" | "entregue";
+
+/** Uma etapa/atividade dentro de um projeto pontual (ex.: inspeção predial). */
+export interface ServiceActivity {
+  id: ID;
+  label: string;
+  done: boolean;
+}
+
 /** A service line from the contract, flagged in-contract or courtesy. */
 export interface ContractedService {
   name: string;
   coverage: Coverage;
+  kind?: ServiceKind; // padrão: recorrente
+  progress?: ServiceProgress; // padrão: em_andamento
+  /** Checklist de etapas — usado em projetos pontuais. */
+  activities?: ServiceActivity[];
+  /** Valor da proposta (R$) — projetos pontuais. */
+  value?: number;
 }
 
 /** A person tied to the condo (síndico, zelador, gerente predial, etc.). */

@@ -24,7 +24,7 @@ export async function GET(
     if (res.ok) {
       const d = await res.json();
       return Response.json(normalize({
-        logradouro: d.logradouro,
+        logradouro: withStreetType(d.descricao_tipo_de_logradouro, d.logradouro),
         numero: d.numero,
         complemento: d.complemento,
         bairro: d.bairro,
@@ -66,6 +66,17 @@ export async function GET(
   }
 
   return Response.json({ error: "Não foi possível consultar este CNPJ agora." }, { status: 502 });
+}
+
+const STREET_TYPE = /^(RUA|R\.|AV|AV\.|AVENIDA|AL|AL\.|ALAMEDA|TV|TRAVESSA|PCA|PRACA|PRAÇA|ROD|RODOVIA|EST|ESTRADA|LARGO|LGO|VIELA|VILA|QUADRA|VIA|MARGINAL|PASSAGEM|PARQUE|PRC)\b/i;
+
+/** Prefixa o tipo (RUA/AVENIDA…) quando o logradouro não já vem com ele. */
+function withStreetType(tipo?: string, logradouro?: string): string {
+  const log = (logradouro || "").trim();
+  const t = (tipo || "").trim();
+  if (!log) return "";
+  if (!t || STREET_TYPE.test(log)) return log;
+  return `${t} ${log}`;
 }
 
 function normalize(d: {

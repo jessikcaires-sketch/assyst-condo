@@ -65,7 +65,7 @@ export function ProjetosView() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 px-4 py-6 md:grid-cols-3 md:px-8">
+        <div className="flex gap-4 overflow-x-auto px-4 py-6 md:px-8">
           {columns.map((col) => (
             <div
               key={col.key}
@@ -80,7 +80,7 @@ export function ProjetosView() {
                 setOverCol(null);
               }}
               className={cn(
-                "rounded-xl border border-t-4 bg-muted/20 transition-colors",
+                "flex w-72 shrink-0 flex-col rounded-xl border border-t-4 bg-muted/20 transition-colors",
                 COLUMN_TONE[col.key],
                 overCol === col.key && "bg-primary/5 ring-2 ring-primary/40",
               )}

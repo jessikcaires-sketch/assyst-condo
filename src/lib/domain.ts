@@ -47,13 +47,25 @@ export const serviceKind: Record<ServiceKind, { label: string }> = {
 };
 
 export const serviceProgress: Record<ServiceProgress, Label> = {
+  aguardando_liberacao: { label: "Aguardando liberação", tone: "muted" },
   liberado: { label: "Liberado", tone: "neutral" },
   em_andamento: { label: "Em andamento", tone: "info" },
   entregue: { label: "Entregue", tone: "success" },
 };
 
-/** Ordem das colunas no quadro de projetos. */
-export const projectFlow: ServiceProgress[] = ["liberado", "em_andamento", "entregue"];
+/** Ordem das colunas no quadro de serviços pontuais. */
+export const projectFlow: ServiceProgress[] = ["aguardando_liberacao", "liberado", "em_andamento", "entregue"];
+
+/** Tags de situação atual de um laudo (sugestões; também aceita texto livre). */
+export const SITUACOES: string[] = [
+  "Aguardando documentação",
+  "Documentação solicitada",
+  "Vistoria agendada",
+  "Organização do material",
+  "Elaboração do laudo",
+  "Revisão do laudo",
+  "Pronto para entrega",
+];
 
 export const activityResponsible: Record<ActivityResponsible, Label> = {
   assyst: { label: "Assyst", tone: "info" },
@@ -325,4 +337,40 @@ export function relativeDays(d: ISODate): string {
   if (n === -1) return "ontem";
   if (n > 0) return `em ${n} dias`;
   return `há ${Math.abs(n)} dias`;
+}
+
+/* ----- dias úteis ----- */
+
+function isWeekend(d: Date): boolean {
+  const w = d.getDay();
+  return w === 0 || w === 6;
+}
+
+function toISO(d: Date): ISODate {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Soma N dias úteis a uma data ISO (pula fins de semana). */
+export function addBusinessDays(iso: ISODate, n: number): ISODate {
+  const d = parse(iso);
+  let added = 0;
+  while (added < n) {
+    d.setDate(d.getDate() + 1);
+    if (!isWeekend(d)) added++;
+  }
+  return toISO(d);
+}
+
+/** Dias úteis de `from` até `to` (negativo se `to` já passou). */
+export function businessDaysBetween(fromIso: ISODate, toIso: ISODate): number {
+  const a = parse(fromIso);
+  const b = parse(toIso);
+  if (a.getTime() === b.getTime()) return 0;
+  const sign = b > a ? 1 : -1;
+  let count = 0;
+  while (a.getTime() !== b.getTime()) {
+    a.setDate(a.getDate() + sign);
+    if (!isWeekend(a)) count += sign;
+  }
+  return count;
 }

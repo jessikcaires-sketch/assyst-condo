@@ -111,7 +111,14 @@ export interface User {
 export type ServiceKind = "recorrente" | "pontual";
 
 /** Andamento de um serviço/projeto. */
-export type ServiceProgress = "liberado" | "em_andamento" | "entregue";
+export type ServiceProgress = "aguardando_liberacao" | "liberado" | "em_andamento" | "entregue";
+
+/** Pendência ad-hoc de um serviço pontual (ex.: refazer drone, doc. pendente). */
+export interface ServicePending {
+  id: ID;
+  text: string;
+  done: boolean;
+}
 
 /** De quem é a pendência de uma etapa. */
 export type ActivityResponsible = "assyst" | "condominio";
@@ -146,6 +153,12 @@ export interface ContractedService {
   value?: number;
   /** Previsão de entrega (data) — serviço pontual. */
   dueDate?: ISODate;
+  /** Prazo contratual em dias úteis após a vistoria (ex.: 30). */
+  slaDays?: number;
+  /** Situação atual (tag): "Documentação solicitada", "Vistoria agendada"… */
+  situacao?: string;
+  /** Pendências ad-hoc do laudo. */
+  pendencias?: ServicePending[];
   /** Data de liberação (início do prazo). */
   releasedAt?: ISODate;
   /** Data de entrega final. */

@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { useCondoStore } from "@/lib/condo-store";
 import { useCatalogs } from "@/lib/catalog-store";
 import { Badge } from "@/components/ui/badge";
-import { projectFlow, serviceProgress, fmtMoney, fmtDate, relativeDays, isOverdue, activityResponsible } from "@/lib/domain";
+import { projectFlow, serviceProgress, fmtMoney, fmtDate, relativeDays, isOverdue, activityResponsible, addBusinessDays, businessDaysBetween } from "@/lib/domain";
 import { serviceColor } from "@/lib/service-color";
 import type { Condominium, ContractedService, ServiceProgress } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ interface Project {
 }
 
 const COLUMN_TONE: Record<ServiceProgress, string> = {
+  aguardando_liberacao: "border-t-muted-foreground/25",
   liberado: "border-t-muted-foreground/40",
   em_andamento: "border-t-info",
   entregue: "border-t-success",
@@ -28,6 +29,8 @@ export function ProjetosView() {
   const cat = useCatalogs();
   const [dragged, setDragged] = React.useState<{ condoId: string; serviceName: string } | null>(null);
   const [overCol, setOverCol] = React.useState<ServiceProgress | null>(null);
+  const [today, setToday] = React.useState("");
+  React.useEffect(() => setToday(new Date().toISOString().slice(0, 10)), []);
 
   const projects: Project[] = condos.flatMap((c) =>
     c.services.filter((s) => s.kind === "pontual").map((service) => ({ condo: c, service })),
@@ -96,6 +99,11 @@ export function ProjetosView() {
                 {col.items.map(({ condo, service }) => {
                   const acts = service.activities ?? [];
                   const done = acts.filter((a) => a.done).length;
+                  const pend = (service.pendencias ?? []).filter((p) => !p.done);
+                  const vist = acts.find((a) => /vistoria|inspe/i.test(a.label));
+                  const base = vist?.completedAt || vist?.dueDate;
+                  const deadline = service.slaDays && base ? addBusinessDays(base, service.slaDays) : service.dueDate;
+                  const bdays = today && deadline && service.progress !== "entregue" ? businessDaysBetween(today, deadline) : null;
                   return (
                     <div
                       key={`${condo.id}-${service.name}`}
@@ -104,13 +112,24 @@ export function ProjetosView() {
                       onDragEnd={() => { setDragged(null); setOverCol(null); }}
                       className="cursor-grab rounded-lg border bg-card p-3 shadow-sm active:cursor-grabbing"
                     >
-                      <span style={serviceColor(service.name, cat.services)} className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold">
-                        {service.name}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span style={serviceColor(service.name, cat.services)} className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold">
+                          {service.name}
+                        </span>
+                        {service.situacao && (
+                          <span className="inline-flex items-center rounded-md bg-warning-soft px-2 py-0.5 text-[0.625rem] font-semibold text-warning-foreground">{service.situacao}</span>
+                        )}
+                      </div>
                       <Link href={`/condominios/${condo.id}`} className="mt-2 flex items-center gap-1.5 text-sm font-medium leading-tight hover:text-primary">
                         <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
                         <span className="min-w-0 truncate">{condo.name}</span>
                       </Link>
+                      {bdays !== null && (
+                        <div className={cn("mt-2 rounded-md px-2 py-1.5 text-center text-sm font-bold", bdays < 0 ? "bg-danger-soft text-danger" : bdays <= 3 ? "bg-warning-soft text-warning-foreground" : "bg-success/10 text-success")}>
+                          {bdays < 0 ? `Atrasado ${Math.abs(bdays)} dia(s) útil(eis)` : bdays === 0 ? "Entrega hoje" : `Faltam ${bdays} dias úteis`}
+                          {deadline && <span className="block text-[0.5625rem] font-normal opacity-70">prazo {fmtDate(deadline)}</span>}
+                        </div>
+                      )}
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                         {typeof service.value === "number" && (
                           <span className="font-mono text-muted-foreground">{fmtMoney(service.value)}</span>
@@ -143,6 +162,14 @@ export function ProjetosView() {
                           </div>
                         );
                       })()}
+                      {pend.length > 0 && (
+                        <div className="mt-2 rounded-md border border-warning/40 bg-warning-soft px-2 py-1.5 text-[0.6875rem] text-warning-foreground">
+                          <span className="font-semibold">{pend.length} pendência{pend.length > 1 ? "s" : ""}</span>
+                          <ul className="mt-0.5 list-disc pl-4">
+                            {pend.slice(0, 3).map((p) => <li key={p.id}>{p.text}</li>)}
+                          </ul>
+                        </div>
+                      )}
                       <select
                         aria-label="Mover projeto"
                         value={service.progress ?? "liberado"}

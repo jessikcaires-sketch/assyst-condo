@@ -3,7 +3,7 @@
 import * as React from "react";
 import { X, Building2, CheckCircle2, Plus, Trash2, ImagePlus, Search, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { condoStatus, contactRole, coverage, serviceProgress, serviceDefaultKind, serviceDefaultActivities, activityResponsible } from "@/lib/domain";
+import { condoStatus, contactRole, coverage, serviceProgress, serviceDefaultKind, serviceDefaultActivities, activityResponsible, SITUACOES } from "@/lib/domain";
 import { useCatalogs } from "@/lib/catalog-store";
 import type {
   Condominium,
@@ -16,6 +16,7 @@ import type {
   ServiceProgress,
   ServiceActivity,
   ActivityResponsible,
+  ServicePending,
 } from "@/lib/types";
 import type { CondoInput } from "@/lib/condo-store";
 import { compressImage } from "@/lib/image";
@@ -196,6 +197,18 @@ export function CondoDialog({
     updateActivities(name, (acts) => acts.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   const removeActivity = (name: string, id: string) =>
     updateActivities(name, (acts) => acts.filter((a) => a.id !== id));
+
+  function updatePendings(name: string, fn: (p: ServicePending[]) => ServicePending[]) {
+    setServices((prev) => prev.map((s) => (s.name === name ? { ...s, pendencias: fn(s.pendencias ?? []) } : s)));
+  }
+  const addPending = (name: string) =>
+    updatePendings(name, (p) => [...p, { id: `pend-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, text: "", done: false }]);
+  const renamePending = (name: string, id: string, text: string) =>
+    updatePendings(name, (p) => p.map((x) => (x.id === id ? { ...x, text } : x)));
+  const togglePending = (name: string, id: string) =>
+    updatePendings(name, (p) => p.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
+  const removePending = (name: string, id: string) =>
+    updatePendings(name, (p) => p.filter((x) => x.id !== id));
 
   function updateContact(id: string, patch: Partial<Contact>) {
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -452,7 +465,18 @@ export function CondoDialog({
                       <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Previsão de entrega</span>
                       <input type="date" value={s.dueDate ?? ""} onChange={(e) => setServiceField(s.name, { dueDate: e.target.value || undefined })} className={cn(miniInput, "w-36")} />
                     </label>
+                    <label className="flex items-center gap-2">
+                      <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Prazo (dias úteis após vistoria)</span>
+                      <input type="number" min={0} value={s.slaDays ?? ""} onChange={(e) => setServiceField(s.name, { slaDays: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="30" className={cn(miniInput, "w-20")} />
+                    </label>
                   </div>
+                  <label className="mt-2 flex items-center gap-2">
+                    <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Situação</span>
+                    <input list={`sit-${s.name.replace(/\W/g, "")}`} value={s.situacao ?? ""} onChange={(e) => setServiceField(s.name, { situacao: e.target.value || undefined })} placeholder="Ex.: Vistoria agendada" className={cn(miniInput, "flex-1")} />
+                    <datalist id={`sit-${s.name.replace(/\W/g, "")}`}>
+                      {SITUACOES.map((x) => <option key={x} value={x} />)}
+                    </datalist>
+                  </label>
                   <div className="mt-2">
                     <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Etapas</span>
                     <div className="mt-1 space-y-1.5">
@@ -471,6 +495,23 @@ export function CondoDialog({
                       ))}
                       <button type="button" onClick={() => addActivity(s.name)} className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-primary hover:underline">
                         <Plus className="size-3" /> Adicionar etapa
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <span className="font-mono text-[0.625rem] uppercase tracking-wide text-muted-foreground">Pendências</span>
+                    <div className="mt-1 space-y-1">
+                      {(s.pendencias ?? []).map((p) => (
+                        <div key={p.id} className="flex items-center gap-2">
+                          <input type="checkbox" checked={p.done} onChange={() => togglePending(s.name, p.id)} className="size-3.5 shrink-0 accent-primary" />
+                          <input value={p.text} onChange={(e) => renamePending(s.name, p.id, e.target.value)} placeholder="Ex.: refazer voo de drone, documento pendente…" className={cn(miniInput, "flex-1", p.done && "line-through opacity-60")} />
+                          <button type="button" onClick={() => removePending(s.name, p.id)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-danger" aria-label="Remover pendência">
+                            <Trash2 className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => addPending(s.name)} className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-primary hover:underline">
+                        <Plus className="size-3" /> Adicionar pendência
                       </button>
                     </div>
                   </div>

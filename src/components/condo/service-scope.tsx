@@ -30,7 +30,8 @@ export function ServiceScope({
 }) {
   const recorrentes = services.filter((s) => (s.kind ?? "recorrente") === "recorrente");
   const pontuais = services.filter((s) => s.kind === "pontual");
-  const [open, setOpen] = React.useState<Set<string>>(new Set());
+  // Projetos pontuais já vêm expandidos (em destaque).
+  const [open, setOpen] = React.useState<Set<string>>(() => new Set(pontuais.map((s) => s.name)));
   const toggleOpen = (name: string) =>
     setOpen((prev) => {
       const next = new Set(prev);

@@ -76,6 +76,7 @@ export function CondoDetail() {
   const responsible = cat.getResponsible(condo.responsibleId);
   const cs = condoStatus[condo.status];
   const contract = contractSignal(condo.contractEnd);
+  const hasRecorrente = condo.services.some((s) => (s.kind ?? "recorrente") === "recorrente");
 
   const proximasAcoes = getActionItems(condo.id)
     .filter((i) => i.status !== "concluido" && i.status !== "cancelado")
@@ -135,12 +136,14 @@ export function CondoDetail() {
             >
               <Pencil className="size-4" /> Editar
             </button>
-            <Link
-              href={`/condominios/${condo.id}/plano-de-acao`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              <ListChecks className="size-4" /> Plano de ação
-            </Link>
+            {hasRecorrente && (
+              <Link
+                href={`/condominios/${condo.id}/plano-de-acao`}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                <ListChecks className="size-4" /> Plano de ação
+              </Link>
+            )}
             <Link
               href="/relatorios"
               className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
@@ -193,50 +196,56 @@ export function CondoDetail() {
           onChange={(services) => updateCondo(condo.id, { services })}
         />
 
-        {/* Resumo executivo */}
-        <section>
-          <div className="eyebrow mb-3">Resumo executivo</div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Pendências abertas" value={stats.openItems} icon={ClipboardList} tone="neutral" />
-            <StatCard label="Atrasadas" value={stats.overdueItems} icon={AlertTriangle} tone="danger" />
-            <StatCard label="Concluídas" value={stats.doneItems} icon={CheckCircle2} tone="success" />
-            <StatCard label="Orçamentos" value={stats.bidsInProgress} icon={Gavel} tone="copper" />
-            <StatCard label="Visitas no mês" value={stats.visitsThisMonth} icon={CalendarRange} tone="info" />
-            <StatCard label="Reuniões no mês" value={stats.meetingsThisMonth} icon={CalendarDays} tone="info" />
-          </div>
-        </section>
+        {/* Resumo executivo + indicadores — só para contratos recorrentes */}
+        {hasRecorrente && (
+          <>
+            <section>
+              <div className="eyebrow mb-3">Resumo executivo</div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                <StatCard label="Pendências abertas" value={stats.openItems} icon={ClipboardList} tone="neutral" />
+                <StatCard label="Atrasadas" value={stats.overdueItems} icon={AlertTriangle} tone="danger" />
+                <StatCard label="Concluídas" value={stats.doneItems} icon={CheckCircle2} tone="success" />
+                <StatCard label="Orçamentos" value={stats.bidsInProgress} icon={Gavel} tone="copper" />
+                <StatCard label="Visitas no mês" value={stats.visitsThisMonth} icon={CalendarRange} tone="info" />
+                <StatCard label="Reuniões no mês" value={stats.meetingsThisMonth} icon={CalendarDays} tone="info" />
+              </div>
+            </section>
 
-        <ValueIndicators metrics={liveMetrics} />
+            <ValueIndicators metrics={liveMetrics} />
+          </>
+        )}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Próximas ações */}
-          <Panel className="lg:col-span-2">
-            <PanelHeader
-              eyebrow="Vencimento futuro e atrasos"
-              title="Próximas ações"
-              action={
-                <Link
-                  href={`/condominios/${condo.id}/plano-de-acao`}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  Plano completo <ArrowUpRight className="size-3.5" />
-                </Link>
-              }
-            />
-            <div className="divide-y">
-              {proximasAcoes.map((item) => (
-                <ActionItemRow key={item.id} item={item} />
-              ))}
-              {proximasAcoes.length === 0 && (
-                <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-                  Nenhuma pendência aberta. Tudo em dia.
-                </div>
-              )}
-            </div>
-          </Panel>
+        <div className={cn("grid grid-cols-1 gap-6", hasRecorrente ? "lg:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-3")}>
+          {/* Próximas ações — só para recorrentes */}
+          {hasRecorrente && (
+            <Panel className="lg:col-span-2">
+              <PanelHeader
+                eyebrow="Vencimento futuro e atrasos"
+                title="Próximas ações"
+                action={
+                  <Link
+                    href={`/condominios/${condo.id}/plano-de-acao`}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    Plano completo <ArrowUpRight className="size-3.5" />
+                  </Link>
+                }
+              />
+              <div className="divide-y">
+                {proximasAcoes.map((item) => (
+                  <ActionItemRow key={item.id} item={item} />
+                ))}
+                {proximasAcoes.length === 0 && (
+                  <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+                    Nenhuma pendência aberta. Tudo em dia.
+                  </div>
+                )}
+              </div>
+            </Panel>
+          )}
 
-          {/* Sidebar: ficha + contatos + agenda */}
-          <div className="space-y-6">
+          {/* Ficha + contatos + agenda */}
+          <div className={cn(hasRecorrente ? "space-y-6" : "contents")}>
             {/* Ficha */}
             <Panel>
               <PanelHeader eyebrow="Cadastro" title="Ficha do condomínio" />

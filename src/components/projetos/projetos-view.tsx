@@ -105,12 +105,13 @@ export function ProjetosView() {
                   const deadline = service.slaDays && base ? addBusinessDays(base, service.slaDays) : service.dueDate;
                   const bdays = today && deadline && service.progress !== "entregue" ? businessDaysBetween(today, deadline) : null;
                   return (
-                    <div
+                    <Link
                       key={`${condo.id}-${service.name}`}
+                      href={`/condominios/${condo.id}`}
                       draggable
                       onDragStart={() => setDragged({ condoId: condo.id, serviceName: service.name })}
                       onDragEnd={() => { setDragged(null); setOverCol(null); }}
-                      className="cursor-grab rounded-lg border bg-card p-3 shadow-sm active:cursor-grabbing"
+                      className="block cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md hover:border-primary/40"
                     >
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span style={serviceColor(service.name, cat.services)} className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold">
@@ -120,10 +121,10 @@ export function ProjetosView() {
                           <span className="inline-flex items-center rounded-md bg-warning-soft px-2 py-0.5 text-[0.625rem] font-semibold text-warning-foreground">{service.situacao}</span>
                         )}
                       </div>
-                      <Link href={`/condominios/${condo.id}`} className="mt-2 flex items-center gap-1.5 text-sm font-medium leading-tight hover:text-primary">
+                      <div className="mt-2 flex items-center gap-1.5 text-sm font-medium leading-tight">
                         <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
                         <span className="min-w-0 truncate">{condo.name}</span>
-                      </Link>
+                      </div>
                       {bdays !== null && (
                         <div className={cn("mt-2 rounded-md px-2 py-1.5 text-center text-sm font-bold", bdays < 0 ? "bg-danger-soft text-danger" : bdays <= 3 ? "bg-warning-soft text-warning-foreground" : "bg-success/10 text-success")}>
                           {bdays < 0 ? `Atrasado ${Math.abs(bdays)} dia(s) útil(eis)` : bdays === 0 ? "Entrega hoje" : `Faltam ${bdays} dias úteis`}
@@ -170,15 +171,7 @@ export function ProjetosView() {
                           </ul>
                         </div>
                       )}
-                      <select
-                        aria-label="Mover projeto"
-                        value={service.progress ?? "liberado"}
-                        onChange={(e) => move(condo, service.name, e.target.value as ServiceProgress)}
-                        className="mt-2.5 h-7 w-full rounded-md border bg-card px-2 text-xs outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-                      >
-                        {projectFlow.map((p) => <option key={p} value={p}>Mover p/ {serviceProgress[p].label}</option>)}
-                      </select>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
